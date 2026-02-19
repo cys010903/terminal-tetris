@@ -36,6 +36,21 @@ void draw_block(int y, int x, int type, int rotation) {
     attroff(COLOR_PAIR(type + 1));
 }
 
+// - A_DIM(흐리게) + 빈 사각형 문자로 실제 블록과 구분
+void draw_ghost_block(int y, int x, int type, int rotation) {
+    attron(COLOR_PAIR(type + 1));
+    attron(A_DIM);
+    for (int i = 0; i < BLOCK_SIZE; i++) {
+        for (int j = 0; j < BLOCK_SIZE; j++) {
+            if (blocks[type][rotation][i][j] != 0) {
+                mvaddstr(y + i + 1, (x + j + 1) * 2, "□");
+            }
+        }
+    }
+    attroff(A_DIM);
+    attroff(COLOR_PAIR(type + 1));
+}
+
 // 게임판 전체(이미 쌓인 블록들)를 그리는 함수 (나중에 사용)
 void draw_board(int board[BOARD_HEIGHT][BOARD_WIDTH]) {
     for (int i = 0; i < BOARD_HEIGHT; i++) {
@@ -67,4 +82,18 @@ void draw_board(int board[BOARD_HEIGHT][BOARD_WIDTH]) {
         mvaddstr(BOARD_HEIGHT + 1, j * 2, "■");
     }
     attroff(COLOR_PAIR(8));
+}
+
+void draw_mino_preview(int top, int left, int type, int rotation) {
+    attron(COLOR_PAIR(type + 1));
+    for (int i = 0; i < BLOCK_SIZE; i++) {
+        for (int j = 0; j < BLOCK_SIZE; j++) {
+            if (blocks[type][rotation][i][j]) {
+                mvaddstr(top + i, left + j * 2, "■");
+            } else {
+                mvaddstr(top + i, left + j * 2, "  "); // 잔상 제거
+            }
+        }
+    }
+    attroff(COLOR_PAIR(type + 1));
 }
