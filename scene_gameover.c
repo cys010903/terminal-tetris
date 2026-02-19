@@ -6,7 +6,7 @@ extern Scene g_scene_game;
 extern Scene g_scene_title;
 
 static void render(void) {
-    clear();
+    erase();
     mvprintw(10, 10, "GAME OVER");
     mvprintw(12, 10, "R) Restart");
     mvprintw(13, 10, "T) Title");

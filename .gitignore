@@ -1,7 +1,13 @@
+cat >> .gitignore <<'EOF'
+
 # build artifacts
 *.o
 main
 test
+
+# editor
+.vscode/
+EOF
 
 # OS/editor junk
 *:Zone.Identifier
