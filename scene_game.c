@@ -23,6 +23,12 @@ static bool hold_used_this_turn; // 한 미노당 1회만 홀드 가능
 #define NEXT_COUNT 5
 static int next_queue[NEXT_COUNT];
 
+//저장 데이터
+int g_last_stage = 1;
+int g_last_score = 0;
+int g_last_blocks_used = 0;
+static int blocks_used = 0;
+
 static void refill_next_queue(void) {
     for (int i = 0; i < NEXT_COUNT; i++) {
         next_queue[i] = rand() % BLOCK_KIND;
@@ -51,10 +57,10 @@ static void spawn(void) {
 
 static int score_for_lines(int lines) {
     switch (lines) {
-        case 1: return 100;
-        case 2: return 300;
-        case 3: return 500;
-        case 4: return 800;
+        case 1: return 10000;
+        case 2: return 30000;
+        case 3: return 50000;
+        case 4: return 80000;
         default: return 0;
     }
 }
@@ -90,6 +96,8 @@ static void enter(void) {
 
     score = 0;
     goal = stage_goal_score(g_selected_stage);
+    
+    blocks_used = 0;
 }
 
 static void render(void) {
@@ -147,18 +155,26 @@ static void handle_input(int ch) {
 
     if (ch == ' ') {
         while (!check_collision(y + 1, x, type, rot)) y++;
+        blocks_used++;
         freeze_block(y, x, type, rot);
         hold_used_this_turn = false;
         int cleared = clear_lines();
         if (cleared > 0) {
-            score += score_for_lines(cleared) * g_selected_stage; // 스테이지 가중치(원치 않으면 *stage 제거)
+            score += score_for_lines(cleared); // * g_selected_stage; // 스테이지 가중치(원치 않으면 *stage 제거)
             if (score >= goal) {
+		stage_mark_cleared(g_selected_stage);
+		g_last_stage = g_selected_stage;
+                g_last_score = score;
+                g_last_blocks_used = blocks_used;
                 scene_set(&g_scene_stage_clear);
                 return;
             }
         }
         spawn();
         if (check_collision(y, x, type, rot)) {
+            g_last_stage = g_selected_stage;
+            g_last_score = score;
+            g_last_blocks_used = blocks_used;
             scene_set(&g_scene_gameover);
         }
     }
@@ -180,6 +196,9 @@ static void handle_input(int ch) {
 
         reset_active_pos();
         if (check_collision(y, x, type, rot)) {
+            g_last_stage = g_selected_stage;
+            g_last_score = score;
+            g_last_blocks_used = blocks_used;
             scene_set(&g_scene_gameover);
         }
     }
@@ -193,12 +212,16 @@ static void update(int dt_ms) {
         if (!check_collision(y + 1, x, type, rot)) {
             y++;
         } else {
+            blocks_used++;
             freeze_block(y, x, type, rot);
             hold_used_this_turn = false;
             int cleared = clear_lines();
             if (cleared > 0) {
                 score += score_for_lines(cleared);
                 if (score >= goal) {
+                    g_last_stage = g_selected_stage;
+                    g_last_score = score;
+                    g_last_blocks_used = blocks_used;
                     scene_set(&g_scene_stage_clear);
                     timer = 0;
                     return;
@@ -207,12 +230,17 @@ static void update(int dt_ms) {
 
             spawn();
             if (check_collision(y, x, type, rot)) {
+                g_last_stage = g_selected_stage;
+                g_last_score = score;
+                g_last_blocks_used = blocks_used;
                 scene_set(&g_scene_gameover);
             }
         }
         timer = 0;
     }
 }
+
+
 
 Scene g_scene_game = {
     .name = "game",

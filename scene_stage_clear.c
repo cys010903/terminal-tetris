@@ -3,10 +3,17 @@
 #include "scene_manager.h"
 #include "stage.h"
 #include "config.h"
+#include "records.h"
 
+extern int g_last_stage, g_last_score, g_last_blocks_used;
 extern Scene g_scene_game;
 extern Scene g_scene_stage_select;
 extern Scene g_scene_title;
+
+static void enter(void) {
+	records_push(g_last_stage, g_last_score, g_last_blocks_used);
+}
+
 
 static void render(void) {
     erase();
@@ -37,7 +44,7 @@ static void update(int dt_ms) { (void)dt_ms; }
 
 Scene g_scene_stage_clear = {
     .name = "stage_clear",
-    .enter = 0,
+    .enter = enter,
     .exit = 0,
     .update = update,
     .render = render,

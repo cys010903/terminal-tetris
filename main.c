@@ -1,6 +1,9 @@
 #include "common.h"
 #include "scene_manager.h"
+#include "stage.h"
+#include "records.h"
 
+bool g_stage_cleared[NUMBER_OF_STAGES + 1] = {false};
 // 시작 씬
 extern Scene g_scene_title;
 
@@ -15,6 +18,8 @@ int main(void) {
     timeout(100);          // getch()가 최대 100ms 대기 (입력 없어도 루프 진행)
 
     init_colors();
+    records_init();
+    records_load();
 
     // 타이틀 씬부터 시작
     scene_set(&g_scene_title);

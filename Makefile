@@ -8,7 +8,7 @@ TARGET = main
 
 # 3. 컴파일에 필요한 모든 소스 파일들
 SRCS = main.c draw.c tetris.c scene_stage_select.c \
-       scene_manager.c scene_title.c scene_game.c scene_gameover.c scene_stage_clear.c
+       scene_manager.c scene_title.c scene_game.c scene_gameover.c scene_stage_clear.c records.c scene_records.c
 # 소스 파일(.c) 이름을 오브젝트 파일(.o) 이름으로 자동 변환
 OBJS = $(SRCS:.c=.o)
 

@@ -58,7 +58,8 @@ static void render(void) {
     int base_y = h/2 - 1;
     for (int s = 1; s <= NUMBER_OF_STAGES; s++) {
         char line[64];
-        snprintf(line, sizeof(line), "Stage %d  (%s)", s, stage_desc(s));
+	const char* clear_mark = stage_is_cleared(s) ? "  [CLEAR]" : "";
+        snprintf(line, sizeof(line), "Stage %d  (%s)%s", s, stage_desc(s), clear_mark);
 
         int x0 = (w - (int)strlen(line))/2;
         if (s == cursor_stage) {
