@@ -9,18 +9,13 @@
 #include "scene.h"
 #include "scene_manager.h"
 #include "title_ascii.h"
-
-// 다른 씬의 "Scene 객체"를 참조하기 위해 extern
-extern Scene g_scene_game;
-extern Scene g_scene_stage_select;
-extern Scene g_scene_records;
-
+#include "settings.h"
 
 static void enter(void) { /* 필요 시 */ }
 static void exit_(void) { /* 필요 시 */ }
 
 static int cursor = 0;
-static const int MENU_COUNT = 3;
+static const int MENU_COUNT = 4;
 
 static int str_col_width(const char* s) {
     if (!s) return 0;
@@ -79,6 +74,7 @@ static void render(void) {
     const char* menus[] = {
         "START",
         "RECORDS",
+        "SETTINGS",
         "QUIT"
     };
     int base_y = h/2 -1;
@@ -112,7 +108,8 @@ static void handle_input(int ch) {
     case '\n':
     case KEY_ENTER:
         if (cursor == 0) scene_set(&g_scene_stage_select);
-        else if(cursor == 1) scene_set(&g_scene_records);
+        else if (cursor == 1) scene_set(&g_scene_records);
+        else if (cursor == 2) scene_set(&g_scene_settings);
         else { endwin(); exit(0); }
         break;
     case '1': cursor = 0; scene_set(&g_scene_stage_select); break;

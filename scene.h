@@ -1,16 +1,13 @@
 #pragma once
+#include "types.h"
 
-typedef struct Scene Scene;
+extern int g_selected_stage;
 
-struct Scene {
-    const char* name;
+void scene_set(Scene* next);
 
-    // 씬 진입/퇴장 시 한 번
-    void (*enter)(void);
-    void (*exit)(void);
-
-    // 매 프레임 호출
-    void (*update)(int dt_ms);   // 논리 진행 (dt는 대충 100ms 넣어도 됨)
-    void (*render)(void);        // 화면 출력
-    void (*handle_input)(int ch);// 키 입력 처리
-};
+extern Scene g_scene_title;
+extern Scene g_scene_game;
+extern Scene g_scene_stage_select;
+extern Scene g_scene_gameover;
+extern Scene g_scene_stage_clear;
+extern Scene g_scene_records;

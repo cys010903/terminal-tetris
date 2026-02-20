@@ -1,11 +1,19 @@
-#include "common.h"
-#include "scene_manager.h"
-#include "stage.h"
+#include <stdlib.h>
+#include <time.h>
+#include <locale.h>
+#include <stddef.h>
+#include <stdbool.h>
+#include <ncursesw/ncurses.h>
+
+#include "config.h"
+#include "scene.h"
 #include "records.h"
+#include "draw.h"
+#include "scene_manager.h"
+#include "settings.h"
 
 bool g_stage_cleared[NUMBER_OF_STAGES + 1] = {false};
-// 시작 씬
-extern Scene g_scene_title;
+
 
 int main(void) {
     srand((unsigned int)time(NULL));
@@ -18,8 +26,8 @@ int main(void) {
     timeout(100);          // getch()가 최대 100ms 대기 (입력 없어도 루프 진행)
 
     init_colors();
+    settings_load();
     records_init();
-    records_load();
 
     // 타이틀 씬부터 시작
     scene_set(&g_scene_title);
@@ -31,9 +39,9 @@ int main(void) {
         int ch = getch();
 
         // 전역 종료 (어떤 씬에서든 q로 종료)
-        if (ch == 'q' || ch == 'Q') {
-            break;
-        }
+        if (ch == 'q' || ch == 'Q') break;
+
+        
 
         if (ch != ERR) {
             scene_input(ch);

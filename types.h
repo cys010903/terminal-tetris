@@ -1,18 +1,16 @@
-#ifndef TYPES_H
-#define TYPES_H
+#pragma once
 
-/*
- * types.h
- * - 프로젝트에서 공유하는 타입/상수(EMPTY 등)
- */
+typedef struct {
+    int stage;
+    int score;
+    int blocks_used;
+} RecordEntry;
 
-#define EMPTY 0
-
-typedef enum {
-    STATE_TITLE,
-    STATE_PLAYING,
-    STATE_GAMEOVER,
-    STATE_EXIT
-} GameState;
-
-#endif /* TYPES_H */
+typedef struct Scene {
+    const char* name;
+    void (*enter)(void);
+    void (*update)(int dt);
+    void (*render)(void);
+    void (*handle_input)(int ch);
+    void (*exit)(void);
+} Scene;

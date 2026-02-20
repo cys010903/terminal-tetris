@@ -1,4 +1,11 @@
-#include "common.h"
+#include <ncursesw/ncurses.h>
+
+#include "config.h"       // BOARD_WIDTH, BOARD_HEIGHT
+#include "tetris.h"       // BLOCK_KIND, BLOCK_SIZE, EMPTY
+#include "tetris_data.h"  // blocks 배열
+#include "draw.h"
+
+#define COLOR_ORANGE 8
 
 // tetris.c에 정의된 4차원 배열을 가져옵니다.
 extern int blocks[BLOCK_KIND][4][BLOCK_SIZE][BLOCK_SIZE];
@@ -96,4 +103,28 @@ void draw_mino_preview(int top, int left, int type, int rotation) {
         }
     }
     attroff(COLOR_PAIR(type + 1));
+}
+
+void draw_line_clear_anim(const int rows[], int count, int frame) {
+    int left = frame;
+    int right = (BOARD_WIDTH - 1) - frame;
+
+    attron(COLOR_PAIR(8));
+    attron(A_BOLD);
+
+    for (int i = 0; i < count; i++) {
+        int r = rows[i];
+        if (r < 0 || r >= BOARD_HEIGHT) continue;
+
+        for (int j = 0; j < BOARD_WIDTH; j++) {
+            if (left <= j && j <= right) {
+                mvaddstr(r + 1, (j + 1) * 2, "□");
+            } else {
+                mvaddstr(r + 1, (j + 1) * 2, "  ");
+            }
+        }
+    }
+
+    attroff(A_BOLD);
+    attroff(COLOR_PAIR(8));
 }

@@ -1,6 +1,8 @@
 #ifndef TETRIS_DATA_H
 #define TETRIS_DATA_H
 
+#pragma once
+#include "tetris.h"
 #include "config.h"
 
 extern int blocks[BLOCK_KIND][4][BLOCK_SIZE][BLOCK_SIZE];

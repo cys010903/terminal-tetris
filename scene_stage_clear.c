@@ -6,9 +6,6 @@
 #include "records.h"
 
 extern int g_last_stage, g_last_score, g_last_blocks_used;
-extern Scene g_scene_game;
-extern Scene g_scene_stage_select;
-extern Scene g_scene_title;
 
 static void enter(void) {
 	records_push(g_last_stage, g_last_score, g_last_blocks_used);

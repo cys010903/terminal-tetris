@@ -1,4 +1,8 @@
-#include "common.h"
+#include <stdbool.h>
+
+#include "config.h"       // BOARD_WIDTH, BOARD_HEIGHT
+#include "tetris.h"       // BLOCK_KIND, BLOCK_SIZE, EMPTY
+#include "tetris_data.h"  // blocks extern
 
 int blocks[BLOCK_KIND][4][BLOCK_SIZE][BLOCK_SIZE] = {
     // 1. MINO_I (하늘색)
@@ -133,4 +137,47 @@ int clear_lines() {
         }
     }
     return lines_cleared;
+}
+
+int tetris_find_full_lines(int out_rows[4]) {
+    int cnt = 0;
+    for (int i = BOARD_HEIGHT - 1; i >= 0; i--) {
+        bool full = true;
+        for (int j = 0; j < BOARD_WIDTH; j++) {
+            if (board[i][j] == EMPTY) { full = false; break; }
+        }
+        if (full) {
+            out_rows[cnt++] = i;
+            if (cnt >= 4) break; // 한 번에 최대 4줄
+        }
+    }
+    return cnt;
+}
+
+void tetris_remove_lines(const int rows[], int count) {
+    if (count <= 0) return;
+
+    bool remove_row[BOARD_HEIGHT] = {false};
+    for (int i = 0; i < count; i++) {
+        int r = rows[i];
+        if (r >= 0 && r < BOARD_HEIGHT) remove_row[r] = true;
+    }
+
+    int dst = BOARD_HEIGHT - 1;
+    for (int src = BOARD_HEIGHT - 1; src >= 0; src--) {
+        if (remove_row[src]) continue;
+        if (dst != src) {
+            for (int j = 0; j < BOARD_WIDTH; j++) {
+                board[dst][j] = board[src][j];
+            }
+        }
+        dst--;
+    }
+
+    // 남은 윗부분은 EMPTY로
+    for (int i = dst; i >= 0; i--) {
+        for (int j = 0; j < BOARD_WIDTH; j++) {
+            board[i][j] = EMPTY;
+        }
+    }
 }
