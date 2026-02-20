@@ -11,3 +11,13 @@ EOF
 
 # OS/editor junk
 *:Zone.Identifier
+
+# build artifacts
+*.o
+
+# backup/copies
+*.zone
+*.zone.*
+*.bak
+*.tmp
+*~
