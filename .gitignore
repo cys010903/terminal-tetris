@@ -21,3 +21,7 @@ EOF
 *.bak
 *.tmp
 *~
+
+# weird copy/identifier artifacts (e.g., "tetris.c:Zone - 복사본.Identifier")
+*:Zone - 복사본.Identifier
+*.Identifier
