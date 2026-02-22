@@ -3,7 +3,7 @@
 #include <locale.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include <ncursesw/ncurses.h>
+#include <ncurses.h>
 
 #include "config.h"
 #include "scene.h"
@@ -11,9 +11,6 @@
 #include "draw.h"
 #include "scene_manager.h"
 #include "settings.h"
-
-bool g_stage_cleared[NUMBER_OF_STAGES + 1] = {false};
-
 
 int main(void) {
     srand((unsigned int)time(NULL));
