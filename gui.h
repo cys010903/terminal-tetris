@@ -46,4 +46,12 @@ void gui_begin_frame(Gui* gui);
 void gui_end_frame(Gui* gui);
 void gui_sleep_ms(uint32_t ms);
 
+// size / rect
+void gui_get_size(Gui* gui, int* out_w, int* out_h);
+void gui_fill_rect(Gui* gui, GuiRect r, GuiColor c);
+// text
+int  gui_text_height(Gui* gui);
+int  gui_text_width(Gui* gui, const char* utf8);
+void gui_draw_text(Gui* gui, int x, int y, GuiColor c, const char* utf8);
+
 #endif

@@ -11,11 +11,20 @@
 #include "title_ascii.h"
 #include "settings.h"
 
+//SDL
+#include "term_compat.h"
+#include "gui.h"
+
 static void enter(void) { /* 필요 시 */ }
 static void exit_(void) { /* 필요 시 */ }
 
 static int cursor = 0;
 static const int MENU_COUNT = 4;
+
+//전방선언
+static void render_sdl(Gui* gui);
+//////////////
+
 
 static int str_col_width(const char* s) {
     if (!s) return 0;
@@ -47,6 +56,12 @@ static int max_line_width(const char* const* lines, int count) {
 }
 
 static void render(void) {
+
+    //SDL
+    Gui* gui = term_get_gui();
+    if (gui) { render_sdl(gui); return; }
+
+    //ncurses
     erase();
 
     int h, w;
@@ -101,6 +116,7 @@ static void render(void) {
 }
 
 
+
 static void handle_input(int ch) {
     switch (ch) {
     case KEY_UP:  cursor = (cursor - 1 + MENU_COUNT) % MENU_COUNT; break;
@@ -128,3 +144,45 @@ Scene g_scene_title = {
     .render = render,
     .handle_input = handle_input
 };
+
+
+//SDL용 랜더
+static void render_sdl(Gui* gui)
+{
+    int win_w = 0, win_h = 0;
+    gui_get_size(gui, &win_w, &win_h);
+
+    const int lh = gui_text_height(gui);
+    const int pad = 8;
+
+    // 로고(간단 버전)
+    const char* title = "TETRIS";
+    int tw = gui_text_width(gui, title);
+    int tx = (win_w - tw) / 2;
+    if (tx < 0) tx = 0;
+
+    GuiColor logo = (GuiColor){ 235,235,245,255 };
+    gui_draw_text(gui, tx, pad, logo, title);
+
+    // 메뉴
+    const char* menus[] = { "START", "RECORDS", "SETTINGS", "QUIT" };
+    int menu_top = (win_h / 2) - (MENU_COUNT * lh) / 2;
+
+    GuiColor text = (GuiColor){ 230,230,230,255 };
+    GuiColor hi_bg = (GuiColor){ 230,230,230,255 };
+    GuiColor hi_fg = (GuiColor){ 30,30,35,255 };
+
+    for (int i = 0; i < MENU_COUNT; i++) {
+        int mw = gui_text_width(gui, menus[i]);
+        int mx = (win_w - mw) / 2;
+        if (mx < 0) mx = 0;
+        int my = menu_top + i * lh;
+
+        if (i == cursor) {
+            gui_fill_rect(gui, (GuiRect){ mx - pad, my - 2, mw + pad*2, lh + 4 }, hi_bg);
+            gui_draw_text(gui, mx, my, hi_fg, menus[i]);
+        } else {
+            gui_draw_text(gui, mx, my, text, menus[i]);
+        }
+    }
+}

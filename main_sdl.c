@@ -5,6 +5,7 @@
 #include "common.h"
 
 #include <SDL2/SDL.h>
+#include <ncurses.h> 
 #include <stdio.h>
 
 static int map_key(int sdl_sym)
