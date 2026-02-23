@@ -4,6 +4,7 @@
 #include "term_compat.h"
 #include "gui.h"
 #include <stdint.h>
+#include <stdbool.h>
 
 static GuiColor g_colors[BLOCK_KIND] = {
     {  0, 255, 255, 255 },  // I
@@ -22,25 +23,19 @@ static void tile_metrics(int* out_tw, int* out_th)
 {
     int cw = 12, ch = 18;
     term_get_cell_px(&cw, &ch);
-
-    // ncurses의 “가로 2칸” 감각 유지
-    if (out_tw) *out_tw = cw * 2;
+    if (out_tw) *out_tw = cw;
     if (out_th) *out_th = ch;
 }
 
 static void board_origin_px(int* out_x, int* out_y)
 {
-    int cw = 12, ch = 18;
-    term_get_cell_px(&cw, &ch);
-
-    if (out_x) *out_x = cw * 2;
-    if (out_y) *out_y = ch * 2;
+    int ox = 0, oy = 0;
+    term_get_board_origin_px(&ox, &oy);
+    if (out_x) *out_x = ox;
+    if (out_y) *out_y = oy;
 }
 
-void init_colors(void)
-{
-    // ncurses 호환용 이름 유지. SDL에선 할 일 없음.
-}
+void init_colors(void) { }
 
 static void draw_tile_px(int px, int py, int tw, int th, GuiColor c, bool outline)
 {
@@ -62,7 +57,6 @@ static void draw_board_grid(void)
 
     gui_fill_rect(gui, (GuiRect){ ox, oy, BOARD_WIDTH * tw, BOARD_HEIGHT * th }, g_board_bg);
 
-    // grid
     for (int x = 0; x <= BOARD_WIDTH; x++) {
         int px = ox + x * tw;
         gui_fill_rect(gui, (GuiRect){ px, oy, 1, BOARD_HEIGHT * th }, g_grid);
@@ -142,15 +136,17 @@ void draw_mino_preview(int top, int left, int type, int rotation)
     Gui* gui = term_get_gui();
     if (!gui) return;
 
+    int ox = 0, oy = 0;
+    term_get_board_origin_px(&ox, &oy);
+
     int cw = 12, ch = 18;
     term_get_cell_px(&cw, &ch);
 
-    // preview는 작게
-    const int tw = (cw * 2) / 2;
+    const int tw = cw / 2;
     const int th = ch / 2;
 
-    const int px0 = left * cw;
-    const int py0 = top  * ch;
+    const int px0 = ox + left * cw;
+    const int py0 = oy + top  * ch;
 
     gui_fill_rect(gui, (GuiRect){ px0, py0, BLOCK_SIZE * tw + 8, BLOCK_SIZE * th + 8 }, (GuiColor){ 25, 25, 30, 255 });
     gui_draw_rect(gui, (GuiRect){ px0, py0, BLOCK_SIZE * tw + 8, BLOCK_SIZE * th + 8 }, (GuiColor){ 70, 70, 85, 255 });
@@ -175,13 +171,27 @@ void draw_line_clear_anim(const int rows[], int count, int frame)
     int ox, oy; board_origin_px(&ox, &oy);
     int tw, th; tile_metrics(&tw, &th);
 
-    const int phase = frame % 6;
-    const int a = (phase < 3) ? 255 : 120;
-    GuiColor flash = { 240, 240, 255, (uint8_t)a };
+    const int full_w = BOARD_WIDTH * tw;
+
+    // 진행도: frame이 커질수록 0 -> 1
+    // LINECLEAR_FRAMES 값을 여기서 모르므로 "frame 기반으로" 적당히 늘리되 상한 full_w
+    // (프레임 수가 7~14 정도면 자연스럽게 퍼짐)
+    int wipe_w = (frame + 1) * (tw * 2);   // 프레임마다 2칸씩 확장
+    if (wipe_w > full_w) wipe_w = full_w;
+
+    int x0 = ox + (full_w - wipe_w) / 2;
+
+    // 마지막 구간 펄스(보기 좋게)
+    const int pulse = frame % 6;
+    const uint8_t a = (wipe_w >= full_w)
+        ? (uint8_t)((pulse < 3) ? 255 : 140)
+        : 220;
+
+    GuiColor flash = { 240, 240, 255, a };
 
     for (int i = 0; i < count; i++) {
         int ry = rows[i];
         if (ry < 0 || ry >= BOARD_HEIGHT) continue;
-        gui_fill_rect(gui, (GuiRect){ ox, oy + ry * th, BOARD_WIDTH * tw, th }, flash);
+        gui_fill_rect(gui, (GuiRect){ x0, oy + ry * th, wipe_w, th }, flash);
     }
 }

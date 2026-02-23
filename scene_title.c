@@ -1,188 +1,123 @@
+// scene_title.c (SDL-only, no ncurses, no SDL_image)
 #define _XOPEN_SOURCE 700
 #define _GNU_SOURCE
 
-#include <ncurses.h>
-#include <string.h>
-#include <stdlib.h> 
-#include <wchar.h>
-#include <locale.h>
 #include "scene.h"
 #include "scene_manager.h"
-#include "title_ascii.h"
-#include "settings.h"
-
-//SDL
 #include "term_compat.h"
 #include "gui.h"
-
-static void enter(void) { /* 필요 시 */ }
-static void exit_(void) { /* 필요 시 */ }
+#include "input_keys.h"
+#include "titlefall.h"
+#include <SDL2/SDL.h>
+#include <string.h>
 
 static int cursor = 0;
-static const int MENU_COUNT = 4;
 
-//전방선언
-static void render_sdl(Gui* gui);
-//////////////
+static const char* menu[] = { "START", "RECORDS", "SETTINGS", "EXIT" };
+static const int MENU_COUNT = (int)(sizeof(menu) / sizeof(menu[0]));
 
-
-static int str_col_width(const char* s) {
-    if (!s) return 0;
-
-    // 멀티바이트(UTF-8) -> 와이드 문자로 변환
-    wchar_t wbuf[1024];
-    size_t n = mbstowcs(wbuf, s, 1023);
-    if (n == (size_t)-1) {
-        // 변환 실패 시 안전하게 strlen로 fallback
-        return (int)strlen(s);
-    }
-    wbuf[n] = L'\0';
-
-    int w = wcswidth(wbuf, (int)n);
-    if (w < 0) {
-        // 폭 계산 실패 시 fallback
-        return (int)strlen(s);
-    }
-    return w;
+static void enter(void)
+{
+    cursor = 0;
 }
 
-static int max_line_width(const char* const* lines, int count) {
-    int maxw = 0;
-    for (int i = 0; i < count; i++) {
-        int w = str_col_width(lines[i]);
-        if (w > maxw) maxw = w;
-    }
-    return maxw;
+static void update(int dt_ms)
+{
+    (void)dt_ms;
 }
 
-static void render(void) {
+static void draw_center_text(Gui* gui, int y, GuiColor c, const char* s)
+{
+    int w, h;
+    gui_get_size(gui, &w, &h);
 
-    //SDL
+    int tw = gui_text_width(gui, s);
+    int x = (w - tw) / 2;
+    if (x < 0) x = 0;
+
+    gui_draw_text(gui, x, y, c, s);
+}
+
+static void render(void)
+{
     Gui* gui = term_get_gui();
-    if (gui) { render_sdl(gui); return; }
+    if (!gui) return;
 
-    //ncurses
-    erase();
+    int win_w = 0, win_h = 0;
+    gui_get_size(gui, &win_w, &win_h);
 
-    int h, w;
-    getmaxyx(stdscr, h, w);
+    // 배경: main loop의 begin/end frame 사이에서 직접 clear
+    SDL_SetRenderDrawColor(gui->ren, 20, 20, 24, 255);
 
-    // ===== 유니코드 기준 폭 계산 =====
-    int maxw = max_line_width(TITLE_ART, TITLE_ART_LINES);
 
-    int start_y = 2;
-    int start_x = (w - maxw) / 2;
-    if (start_x < 0) start_x = 0;
+    // 타이틀(텍스트 로고)
+    draw_center_text(gui, 70, (GuiColor){ 235,235,235,255 }, "TETRIS");
 
-    if (start_y + TITLE_ART_LINES + 6 > h) {
-        start_y = 0;
-    }
+    // 메뉴 레이아웃
+    const int item_w = 260;
+    const int item_h = 46;
+    const int gap    = 14;
 
-    // ===== 로고 출력 =====
-    for (int i = 0; i < TITLE_ART_LINES; i++) {
-        mvaddstr(start_y + i, start_x, TITLE_ART[i]);
-    }
+    int total_h = MENU_COUNT * item_h + (MENU_COUNT - 1) * gap;
+    int start_y = 150;
+    if (start_y + total_h > win_h - 30) start_y = win_h - 30 - total_h;
+    if (start_y < 110) start_y = 110;
 
-    // ===== 메뉴 =====
-    int menu_y = start_y + TITLE_ART_LINES + 2;
+    int start_x = (win_w - item_w) / 2;
 
-    const char* menus[] = {
-        "START",
-        "RECORDS",
-        "SETTINGS",
-        "QUIT"
-    };
-    int base_y = h/2 -1;
-    
     for (int i = 0; i < MENU_COUNT; i++) {
-        const char* line = menus[i];
-        int x0 = (w - (int)strlen(line)) / 2;
-        if (x0 < 0) x0 = 0;
+        GuiRect r = { start_x, start_y + i * (item_h + gap), item_w, item_h };
 
-        if (i == cursor) {
-            attron(A_REVERSE);
-            mvprintw(base_y + i, x0, "%s", line);
-            attroff(A_REVERSE);
-        } else {
-            mvprintw(base_y + i, x0, "%s", line);
-        }
+        GuiColor fill = (i == cursor)
+            ? (GuiColor){ 240, 240, 240, 255 }
+            : (GuiColor){  80,  80,  90, 255 };
+
+        gui_fill_rect(gui, r, fill);
+
+        GuiColor tc = (i == cursor)
+            ? (GuiColor){  20,  20,  24, 255 }
+            : (GuiColor){ 230, 230, 230, 255 };
+
+        int tw = gui_text_width(gui, menu[i]);
+        int th = gui_text_height(gui);
+        int tx = r.x + (r.w - tw) / 2;
+        int ty = r.y + (r.h - th) / 2;
+
+        gui_draw_text(gui, tx, ty, tc, menu[i]);
     }
 
-    menu_y += 3;
-    const char* hint = "[←/→ Move] [↓ Soft] [↑ Rotate] [Space Hard] [C Hold]";
-    mvaddstr(menu_y, (w - (int)strlen(hint)) / 2, hint);
-
-    refresh();
+    // 여기서 present 하지 않음 (main에서 gui_end_frame이 처리)
 }
 
-
-
-static void handle_input(int ch) {
-    switch (ch) {
-    case KEY_UP:  cursor = (cursor - 1 + MENU_COUNT) % MENU_COUNT; break;
-    case KEY_DOWN: cursor = (cursor + 1) % MENU_COUNT; break;
-    case '\n':
-    case KEY_ENTER:
-        if (cursor == 0) scene_set(&g_scene_stage_select);
-        else if (cursor == 1) scene_set(&g_scene_records);
-        else if (cursor == 2) scene_set(&g_scene_settings);
-        else { endwin(); exit(0); }
-        break;
-    case '1': cursor = 0; scene_set(&g_scene_stage_select); break;
-    case 'q':
-    case 'Q': endwin(); exit(0); break;
+static void do_select(void)
+{
+    switch (cursor) {
+    case 0: scene_set(&g_scene_stage_select); break;
+    case 1: scene_set(&g_scene_records);      break;
+    case 2: scene_set(&g_scene_settings);     break;
+    case 3: scene_request_quit();             break;
+    default: break;
     }
 }
 
-static void update(int dt_ms) { (void)dt_ms; }
+static void handle_input(int key)
+{
+    if (key == IK_UP)   cursor = (cursor - 1 + MENU_COUNT) % MENU_COUNT;
+    if (key == IK_DOWN) cursor = (cursor + 1) % MENU_COUNT;
+
+    if (key == IK_CONFIRM) do_select();
+    if (key == IK_CANCEL)  scene_request_quit();
+}
+
+static void exit_(void)
+{
+}
 
 Scene g_scene_title = {
     .name = "title",
     .enter = enter,
-    .exit = exit_,
     .update = update,
     .render = render,
-    .handle_input = handle_input
+    .handle_input = handle_input,
+    .exit = exit_,
 };
-
-
-//SDL용 랜더
-static void render_sdl(Gui* gui)
-{
-    int win_w = 0, win_h = 0;
-    gui_get_size(gui, &win_w, &win_h);
-
-    const int lh = gui_text_height(gui);
-    const int pad = 8;
-
-    // 로고(간단 버전)
-    const char* title = "TETRIS";
-    int tw = gui_text_width(gui, title);
-    int tx = (win_w - tw) / 2;
-    if (tx < 0) tx = 0;
-
-    GuiColor logo = (GuiColor){ 235,235,245,255 };
-    gui_draw_text(gui, tx, pad, logo, title);
-
-    // 메뉴
-    const char* menus[] = { "START", "RECORDS", "SETTINGS", "QUIT" };
-    int menu_top = (win_h / 2) - (MENU_COUNT * lh) / 2;
-
-    GuiColor text = (GuiColor){ 230,230,230,255 };
-    GuiColor hi_bg = (GuiColor){ 230,230,230,255 };
-    GuiColor hi_fg = (GuiColor){ 30,30,35,255 };
-
-    for (int i = 0; i < MENU_COUNT; i++) {
-        int mw = gui_text_width(gui, menus[i]);
-        int mx = (win_w - mw) / 2;
-        if (mx < 0) mx = 0;
-        int my = menu_top + i * lh;
-
-        if (i == cursor) {
-            gui_fill_rect(gui, (GuiRect){ mx - pad, my - 2, mw + pad*2, lh + 4 }, hi_bg);
-            gui_draw_text(gui, mx, my, hi_fg, menus[i]);
-        } else {
-            gui_draw_text(gui, mx, my, text, menus[i]);
-        }
-    }
-}

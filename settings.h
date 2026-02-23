@@ -1,5 +1,7 @@
 #pragma once
 #include <stdbool.h>
+#include "input_keys.h"
+
 
 typedef enum {
     RNG_PURE = 0,   // rand()%7
@@ -11,12 +13,23 @@ typedef enum {
     WASD_ON  = 1
 } WasdMode;
 
-typedef struct {
+
+
+typedef struct GameSettings{
     int version;
     RandomizerMode randomizer;
     bool ghost;
     bool hold;
     WasdMode wasd;
+     // === key binds (InputKey 기준) ===
+    InputKey key_left;
+    InputKey key_right;
+    InputKey key_down;
+    InputKey key_rotate;
+
+    InputKey key_page_prev;
+    InputKey key_page_next;
+    InputKey key_back;
 } GameSettings;
 
 extern GameSettings g_settings;

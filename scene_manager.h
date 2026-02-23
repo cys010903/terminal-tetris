@@ -1,6 +1,12 @@
 #pragma once
+
 #include "scene.h"
 
+#ifdef BUILD_SDL
+#include "term_compat.h"
+#else
+#include "term.h"
+#endif
 // =============================================================
 // Global Scene objects (defined in each scene_*.c)
 //
@@ -22,3 +28,6 @@ Scene* scene_get(void);
 void scene_update(int dt_ms);
 void scene_render(void);
 void scene_input(int ch);
+
+void scene_request_quit(void);
+int  scene_is_quit_requested(void);

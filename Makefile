@@ -1,46 +1,39 @@
-CC = gcc
-CFLAGS = -Wall -g
+# Makefile (SDL-only)
 
-# ncurses (임시: scene들이 mvprintw 등 ncurses를 직접 써서 링크 필요)
-NCURSES_LIBS = -lncursesw
+CC     := gcc
+TARGET := main
 
-# SDL2
-SDL_CFLAGS = $(shell sdl2-config --cflags)
-SDL_LIBS   = $(shell sdl2-config --libs)
-SDL_TTF    = -lSDL2_ttf
+SDL_CFLAGS := $(shell sdl2-config --cflags 2>/dev/null)
+SDL_LIBS   := $(shell sdl2-config --libs   2>/dev/null)
 
-all: term
+TTF_CFLAGS := $(shell pkg-config --cflags SDL2_ttf 2>/dev/null)
+TTF_LIBS   := $(shell pkg-config --libs   SDL2_ttf 2>/dev/null)
 
-# ===== 공용(게임 로직/씬) =====
-SRCS_GAME = tetris.c stage.c settings.c records.c \
-            scene_manager.c scene_title.c scene_stage_select.c \
-            scene_game.c scene_gameover.c scene_stage_clear.c \
-            scene_records.c scene_settings.c
+CFLAGS := -Wall -g -D_REENTRANT -DBUILD_SDL $(SDL_CFLAGS) $(TTF_CFLAGS)
+LDLIBS := $(SDL_LIBS) $(TTF_LIBS)
 
-OBJS_GAME = $(SRCS_GAME:.c=.o)
+SRCS := \
+  main_sdl.c gui_sdl.c term_compat.c \
+  input_sdl.c \
+  scene_manager.c scene_title.c scene_stage_select.c scene_game.c \
+  scene_gameover.c scene_stage_clear.c scene_records.c scene_settings.c \
+  tetris.c records.c stage.c settings.c common.c layout.c draw_game.c \
+  draw_sdl.c bg_crt.c titlefall.c
 
-# ===== 터미널 빌드 =====
-SRCS_TERM = main.c draw.c term.c
-OBJS_TERM = $(SRCS_TERM:.c=.o)
+OBJS := $(SRCS:.c=.o)
 
-term: $(OBJS_TERM) $(OBJS_GAME)
-	$(CC) $^ -o main $(NCURSES_LIBS)
+.PHONY: all clean run
 
-# ===== SDL 빌드 =====
-SRCS_SDL = main_sdl.c gui_sdl.c draw_sdl.c term_compat.c
-OBJS_SDL = $(SRCS_SDL:.c=.o)
+all: $(TARGET)
 
-sdl: $(OBJS_SDL) $(OBJS_GAME)
-	$(CC) $^ -o tetris_gui $(SDL_LIBS) $(SDL_TTF) $(NCURSES_LIBS)
+$(TARGET): $(OBJS)
+	$(CC) $(OBJS) -o $@ $(LDLIBS)
 
-# ===== rules =====
-%.o: %.c common.h
+%.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# SDL 전용 오브젝트만 SDL_CFLAGS 추가
-main_sdl.o gui_sdl.o draw_sdl.o term_compat.o: CFLAGS += $(SDL_CFLAGS)
+run: $(TARGET)
+	./$(TARGET)
 
 clean:
-	rm -f main tetris_gui *.o
-
-.PHONY: all term sdl clean
+	rm -f $(OBJS) $(TARGET)

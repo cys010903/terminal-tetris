@@ -1,9 +1,13 @@
-#include <ncursesw/ncurses.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "scene.h"
 #include "scene_manager.h"
 #include "settings.h"
+
+// SDL/GUI 추상화
+#include "term_compat.h"
+#include "gui.h"
 
 typedef enum {
     ITEM_RANDOMIZER = 0,
@@ -44,15 +48,38 @@ static void apply_left_right(int dir) {
     }
 }
 
+// ===== forward =====
+static void render_sdl(Gui* gui);
+#ifndef BUILD_SDL
+static void render_ncu(void);
+#endif
+
 static void render(void) {
-    erase();
-    int h, w;
-    getmaxyx(stdscr, h, w);
+    Gui* gui = term_get_gui();
+    if (gui) { render_sdl(gui); return; }
 
-    const char* title = "=== SETTINGS ===";
-    mvprintw(2, (w - (int)strlen(title)) / 2, "%s", title);
+}
 
-    int y = 5;
+static void render_sdl(Gui* gui)
+{
+    int w = 0, h = 0;
+    gui_get_size(gui, &w, &h);
+
+    const int lh = gui_text_height(gui);
+    const int pad = 10;
+
+    GuiColor title_c = (GuiColor){ 235,235,245,255 };
+    GuiColor text_c  = (GuiColor){ 230,230,230,255 };
+    GuiColor dim_c   = (GuiColor){ 180,180,190,255 };
+    GuiColor hi_bg   = (GuiColor){ 230,230,230,255 };
+    GuiColor hi_fg   = (GuiColor){ 30,30,35,255 };
+
+    const char* title = "SETTINGS";
+    int tw = gui_text_width(gui, title);
+    int tx = (w - tw) / 2; if (tx < 0) tx = 0;
+    int ty = pad;
+    gui_draw_text(gui, tx, ty, title_c, title);
+
     const char* labels[ITEM_COUNT] = {
         "Randomizer",
         "Ghost",
@@ -61,6 +88,12 @@ static void render(void) {
         "Reset to Default",
         "Back"
     };
+
+    int list_top = ty + lh * 3;
+    int list_count = ITEM_COUNT;
+    int list_h = list_count * lh;
+    int centered = (h - list_h) / 2;
+    if (centered > list_top) list_top = centered;
 
     char valuebuf[64];
     for (int i = 0; i < ITEM_COUNT; i++) {
@@ -86,35 +119,41 @@ static void render(void) {
         if (val[0] != '\0') snprintf(line, sizeof(line), "%-14s : %s", labels[i], val);
         else                snprintf(line, sizeof(line), "%s", labels[i]);
 
-        int x0 = (w - (int)strlen(line)) / 2;
-        if (x0 < 0) x0 = 0;
+        int lw = gui_text_width(gui, line);
+        int x0 = (w - lw) / 2; if (x0 < 0) x0 = 0;
+        int y0 = list_top + i * lh;
 
-        if (i == cursor) attron(A_REVERSE);
-        mvprintw(y + i, x0, "%s", line);
-        if (i == cursor) attroff(A_REVERSE);
+        if (i == cursor) {
+            gui_fill_rect(gui, (GuiRect){ x0 - pad, y0 - 2, lw + pad*2, lh + 4 }, hi_bg);
+            gui_draw_text(gui, x0, y0, hi_fg, line);
+        } else {
+            gui_draw_text(gui, x0, y0, text_c, line);
+        }
     }
 
     const char* hint = "[UP/DOWN] Select   [LEFT/RIGHT or ENTER] Toggle   [S] Save   [B/ESC] Back";
-    mvprintw(h - 2, (w - (int)strlen(hint)) / 2, "%s", hint);
-
-    refresh();
+    int hw = gui_text_width(gui, hint);
+    int hx = (w - hw) / 2; if (hx < 0) hx = 0;
+    gui_draw_text(gui, hx, h - pad - lh, dim_c, hint);
 }
 
+// scene_settings.c
 static void handle_input(int ch) {
     switch (ch) {
-        case KEY_UP:
+        case IK_UP:
             cursor = (cursor - 1 + ITEM_COUNT) % ITEM_COUNT;
             break;
-        case KEY_DOWN:
+        case IK_DOWN:
             cursor = (cursor + 1) % ITEM_COUNT;
             break;
-        case KEY_LEFT:
-        case KEY_RIGHT:
-            if (cursor != ITEM_BACK) apply_left_right((ch == KEY_LEFT) ? -1 : +1);
+
+        case IK_LEFT:
+        case IK_RIGHT:
+            if (cursor != ITEM_BACK) apply_left_right((ch == IK_LEFT) ? -1 : +1);
             break;
 
+        case IK_CONFIRM:
         case '\n':
-        case KEY_ENTER:
         case ' ':
             if (cursor == ITEM_BACK) {
                 settings_save();
@@ -133,7 +172,7 @@ static void handle_input(int ch) {
 
         case 'b':
         case 'B':
-        case 27: // ESC
+        case IK_CANCEL:
             settings_save();
             scene_set(&g_scene_title);
             break;

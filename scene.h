@@ -1,5 +1,6 @@
 #pragma once
 #include "types.h"
+#include "common.h"
 
 extern int g_selected_stage;
 

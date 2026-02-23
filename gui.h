@@ -18,7 +18,14 @@ typedef struct Gui {
     TTF_Font* font;
     GuiColor bg;
     int font_h;
+
+    // ===== logical resolution (fixed virtual screen) =====
+    // All draw coordinates are in this space.
+    // The renderer output is letterboxed to preserve aspect ratio.
+    int logical_w;
+    int logical_h;
 } Gui;
+
 typedef struct {
     int quit;
     int last_key;

@@ -1,4 +1,3 @@
-
 #include "gui.h"
 #include "term_compat.h"
 
@@ -9,6 +8,31 @@
 #include <string.h>
 #include <stdio.h>
 
+static void apply_logical_letterbox(Gui* gui)
+{
+    if (!gui || !gui->ren || !gui->win) return;
+    if (gui->logical_w <= 0 || gui->logical_h <= 0) return;
+
+    int win_w = 0, win_h = 0;
+    SDL_GetWindowSize(gui->win, &win_w, &win_h);
+    if (win_w <= 0 || win_h <= 0) return;
+
+    const float sx = (float)win_w / (float)gui->logical_w;
+    const float sy = (float)win_h / (float)gui->logical_h;
+    const float s  = (sx < sy) ? sx : sy;
+
+    const int vp_w = (int)(gui->logical_w * s + 0.5f);
+    const int vp_h = (int)(gui->logical_h * s + 0.5f);
+
+    SDL_Rect vp;
+    vp.x = (win_w - vp_w) / 2;
+    vp.y = (win_h - vp_h) / 2;
+    vp.w = vp_w;
+    vp.h = vp_h;
+
+    SDL_RenderSetViewport(gui->ren, &vp);
+    SDL_RenderSetScale(gui->ren, s, s);
+}
 
 int gui_init(Gui* gui, int w, int h, const char* title)
 {
@@ -24,12 +48,12 @@ int gui_init(Gui* gui, int w, int h, const char* title)
         return 0;
     }
 
-    // 창 고정(리사이즈 없음)
+    // 창 리사이즈 허용 (논리 해상도에 맞춰 레터박싱)
     SDL_Window* win = SDL_CreateWindow(
         title,
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         w, h,
-        0
+        SDL_WINDOW_RESIZABLE
     );
     if (!win) {
         TTF_Quit();
@@ -53,6 +77,12 @@ int gui_init(Gui* gui, int w, int h, const char* title)
     gui->bg  = (GuiColor){ 20, 20, 24, 255 };
     gui->font = NULL;
     gui->font_h = 0;
+
+    // logical resolution = init size (virtual screen)
+    gui->logical_w = w;
+    gui->logical_h = h;
+
+    apply_logical_letterbox(gui);
     return 1;
 }
 
@@ -97,8 +127,15 @@ void gui_set_bg(Gui* gui, GuiColor c)
 void gui_begin_frame(Gui* gui)
 {
     if (!gui) return;
+
+    // Clear whole window (including letterbox area)
+    SDL_RenderSetViewport(gui->ren, NULL);
+    SDL_RenderSetScale(gui->ren, 1.0f, 1.0f);
     SDL_SetRenderDrawColor(gui->ren, gui->bg.r, gui->bg.g, gui->bg.b, gui->bg.a);
     SDL_RenderClear(gui->ren);
+
+    // Then apply letterboxed logical viewport for all subsequent draw calls.
+    apply_logical_letterbox(gui);
 }
 
 void gui_end_frame(Gui* gui)
@@ -110,10 +147,9 @@ void gui_end_frame(Gui* gui)
 void gui_get_size(Gui* gui, int* out_w, int* out_h)
 {
     if (!gui) return;
-    int w = 0, h = 0;
-    SDL_GetWindowSize(gui->win, &w, &h);
-    if (out_w) *out_w = w;
-    if (out_h) *out_h = h;
+    // Return logical size so layout is stable and never "falls out" of the window.
+    if (out_w) *out_w = gui->logical_w;
+    if (out_h) *out_h = gui->logical_h;
 }
 
 static SDL_Rect to_sdl_rect(GuiRect r)
@@ -141,7 +177,6 @@ void gui_draw_rect(Gui* gui, GuiRect r, GuiColor c)
 
 static const char* pick_default_font_path(void)
 {
-    // Ubuntu/WSL에서 흔한 폰트 경로 우선
     static const char* candidates[] = {
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
         "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
@@ -220,4 +255,10 @@ uint32_t gui_ticks_ms(void)
 void gui_sleep_ms(uint32_t ms)
 {
     SDL_Delay(ms);
+}
+
+SDL_Renderer* gui_sdl_get_renderer(Gui* gui)
+{
+    if (!gui) return NULL;
+    return gui->ren;
 }
