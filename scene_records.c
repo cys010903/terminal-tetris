@@ -54,6 +54,8 @@ static void render_sdl(Gui* gui)
 
     const int lh = gui_text_height(gui);
     const int pad = 12;
+    const int inner_pad = 14;
+    const int line_step = lh + 4;
 
     GuiColor title_c = (GuiColor){ 235,235,245,255 };
     GuiColor text_c  = (GuiColor){ 230,230,230,255 };
@@ -75,48 +77,97 @@ static void render_sdl(Gui* gui)
              total,
              (total == 0) ? 0 : (page + 1),
              total_pages);
-    gui_draw_text(gui, pad, pad + lh + 6, dim_c, info);
+
+    const char* footer = "[A/←] Prev   [D/→] Next   [ESC/B] Back";
+
+    // ===== 패널 레이아웃(텍스트 감싸기) =====
+    int line_count = 0;
+    const char* line0 = info;
+    line_count++;
+
+    const char* header1 = "No   Stage    Score    BlocksUsed";
+    const char* header2 = "-----------------------------------";
+
+    RecordEntry tmp[page_size];
+    int n = 0;
+    char rows[page_size][96];
+
+    if (total > 0) {
+        n = records_read_latest_page(page, page_size, tmp);
+        line_count += 2; // header1, header2
+        line_count += n; // rows
+    } else {
+        line_count += 1; // "No records yet."
+    }
+
+    line_count += 1; // footer
+
+    // 최대 폭 계산
+    int maxw = 0;
+    int ww = gui_text_width(gui, line0); if (ww > maxw) maxw = ww;
+    ww = gui_text_width(gui, footer); if (ww > maxw) maxw = ww;
+    if (total > 0) {
+        ww = gui_text_width(gui, header1); if (ww > maxw) maxw = ww;
+        ww = gui_text_width(gui, header2); if (ww > maxw) maxw = ww;
+    } else {
+        ww = gui_text_width(gui, "No records yet."); if (ww > maxw) maxw = ww;
+    }
+
+    // rows 문자열 미리 만들고 폭 반영
+    if (total > 0) {
+        for (int i = 0; i < n; i++) {
+            long global_no = total - (page * page_size + i);
+
+            char stage_buf[8];
+            if (tmp[i].stage == 0) strcpy(stage_buf, "INF");
+            else snprintf(stage_buf, sizeof(stage_buf), "%d", tmp[i].stage);
+
+            snprintf(rows[i], sizeof(rows[i]),
+                     "%3ld   %5s   %7d   %10d",
+                     global_no, stage_buf, tmp[i].score, tmp[i].blocks_used);
+
+            ww = gui_text_width(gui, rows[i]);
+            if (ww > maxw) maxw = ww;
+        }
+    }
+
+    int panel_w = maxw + inner_pad * 2;
+    if (panel_w > w - 24) panel_w = w - 24;
+    int panel_h = inner_pad * 2 + (line_count * line_step) - 4;
+    if (panel_h > h - 24) panel_h = h - 24;
+
+    int px = (w - panel_w) / 2;
+    int py = pad + lh + 10;
+    if (py + panel_h > h - 12) py = h - 12 - panel_h;
+    if (py < pad + lh + 6) py = pad + lh + 6;
+
+    GuiColor panel_bg = (GuiColor){ 40,40,48,235 };
+    GuiColor panel_bd = (GuiColor){ 180,180,190,255 };
+    gui_fill_rect(gui, (GuiRect){ px, py, panel_w, panel_h }, panel_bg);
+    gui_draw_rect(gui, (GuiRect){ px, py, panel_w, panel_h }, panel_bd);
+
+    // ===== 패널 내부 텍스트 =====
+    int y = py + inner_pad;
+    gui_draw_text(gui, px + inner_pad, y, dim_c, info);
+    y += line_step;
 
     if (total == 0) {
         const char* none = "No records yet.";
-        int nx = (w - gui_text_width(gui, none)) / 2; if (nx < 0) nx = 0;
-        gui_draw_text(gui, nx, h/2, text_c, none);
+        gui_draw_text(gui, px + inner_pad, y, text_c, none);
+        y += line_step;
+    } else {
+        gui_draw_text(gui, px + inner_pad, y, text_c, header1);
+        y += line_step;
+        gui_draw_text(gui, px + inner_pad, y, dim_c, header2);
+        y += line_step;
 
-        const char* footer = "[A/←] Prev   [D/→] Next   [ESC/B] Back";
-        int fx = (w - gui_text_width(gui, footer)) / 2; if (fx < 0) fx = 0;
-        gui_draw_text(gui, fx, h - pad - lh, dim_c, footer);
-        return;
+        for (int i = 0; i < n; i++) {
+            gui_draw_text(gui, px + inner_pad, y, text_c, rows[i]);
+            y += line_step;
+        }
     }
 
-    // header
-    int y = pad + lh*2 + 16;
-    gui_draw_text(gui, pad, y, text_c, "No   Stage    Score    BlocksUsed");
-    y += lh;
-    gui_draw_text(gui, pad, y, dim_c, "-----------------------------------");
-    y += lh;
-
-    RecordEntry tmp[page_size];
-    int n = records_read_latest_page(page, page_size, tmp);
-
-    for (int i = 0; i < n; i++) {
-        long global_no = total - (page * page_size + i);
-
-        char stage_buf[8];
-        if (tmp[i].stage == 0) strcpy(stage_buf, "INF");
-        else snprintf(stage_buf, sizeof(stage_buf), "%d", tmp[i].stage);
-
-        char line[96];
-        snprintf(line, sizeof(line),
-                 "%3ld   %5s   %7d   %10d",
-                 global_no, stage_buf, tmp[i].score, tmp[i].blocks_used);
-
-        gui_draw_text(gui, pad, y + i * lh, text_c, line);
-    }
-
-    // footer
-    const char* footer = "[A/←] Prev   [D/→] Next   [ESC/B] Back";
-    int fx = (w - gui_text_width(gui, footer)) / 2; if (fx < 0) fx = 0;
-    gui_draw_text(gui, fx, h - pad - lh, dim_c, footer);
+    gui_draw_text(gui, px + inner_pad, py + panel_h - inner_pad - lh, dim_c, footer);
 }
 
 #ifndef BUILD_SDL

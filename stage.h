@@ -1,22 +1,16 @@
 #pragma once
-#include "config.h"   // NUMBER_OF_STAGES 쓰려고 필요
-#include <stdbool.h>
+#include "config.h"
 
 // 스테이지 선택 결과(1부터)
+// NOTE: g_selected_stage == 0 이면 "무한(ENDLESS)" 모드
 extern int g_selected_stage;
-extern bool g_stage_cleared[NUMBER_OF_STAGES + 1];
 
-static inline bool stage_is_cleared(int stage) {
-	if(stage < 1) stage = 1;
-	if(stage > NUMBER_OF_STAGES) stage = NUMBER_OF_STAGES;
-	return g_stage_cleared[stage];
-}
+// clears.log에서 클리어 상태 로드
+void stage_clear_load(void);
 
-static inline void stage_mark_cleared(int stage) {
-	if (stage < 1) stage = 1;
-	if(stage> NUMBER_OF_STAGES) stage = NUMBER_OF_STAGES;
-	g_stage_cleared[stage] = true;
-}
+// 클리어 상태 조회/마킹 (전역변수 직접 접근 금지)
+int  stage_is_cleared(int stage);
+void stage_mark_cleared(int stage);
 
 // 스테이지별 목표 점수(원하시면 값은 마음대로 조정하세요)
 static inline int stage_goal_score(int stage) {

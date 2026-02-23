@@ -2,6 +2,7 @@
 #include "records.h"
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 typedef struct {
     RecordEntry buf[RECORDS_BUFFER_SIZE];
@@ -10,25 +11,27 @@ typedef struct {
 } RecordRing;
 
 static RecordRing g_ring;
-static const char* kLogFile = "records.log";
-static void records_load_from_file(void);
 
+static const char* kRecordFile = "records.log"; // 바이너리 RecordEntry 전용
+static const char* kClearFile  = "clears.log";  // 클리어 이벤트 전용(텍스트)
+
+static void records_load_from_file(void);
 
 void records_init(void)
 {
     records_load_from_file(); // 시작 시 파일의 최신 RECORDS_BUFFER_SIZE개를 링버퍼로 복원
 }
 
-//파일에 기록 1개 저장장
+// 파일에 RecordEntry 1개 바이너리 append
 static void log_append(const RecordEntry* e)
 {
-    FILE* f = fopen(kLogFile, "ab");
+    FILE* f = fopen(kRecordFile, "ab");
     if (!f) return;
     fwrite(e, sizeof(*e), 1, f);
     fclose(f);
 }
 
-//기록 저장할 때 뭘 저장하느냐
+// 기록 저장
 void records_push(int stage, int score, int blocks_used)
 {
     RecordEntry e;
@@ -47,10 +50,10 @@ void records_push(int stage, int score, int blocks_used)
     log_append(&e);
 }
 
-//로그 카운트 하는 함수
+// records.log(바이너리) 엔트리 개수
 long records_log_count(void)
 {
-    FILE* f = fopen(kLogFile, "rb");
+    FILE* f = fopen(kRecordFile, "rb");
     if (!f) return 0;
     fseek(f, 0, SEEK_END);
     long sz = ftell(f);
@@ -59,7 +62,7 @@ long records_log_count(void)
     return sz / (long)sizeof(RecordEntry);
 }
 
-//페이지 넘김용 함수수
+// 최신에서 start_from_latest만큼 떨어진 지점부터 n개를 역순으로 읽기
 int records_log_read_latest_range(long start_from_latest, int n, RecordEntry* out)
 {
     if (n <= 0) return 0;
@@ -69,7 +72,7 @@ int records_log_read_latest_range(long start_from_latest, int n, RecordEntry* ou
     if (start_from_latest < 0) start_from_latest = 0;
     if (start_from_latest >= total) return 0;
 
-    FILE* f = fopen(kLogFile, "rb");
+    FILE* f = fopen(kRecordFile, "rb");
     if (!f) return 0;
 
     int got = 0;
@@ -88,7 +91,7 @@ int records_log_read_latest_range(long start_from_latest, int n, RecordEntry* ou
     return got;
 }
 
-//파일에 저장된 기록 10개를 가져와서 기록
+// 시작 시 records.log 마지막 RECORDS_BUFFER_SIZE개를 링버퍼로 복원
 static void records_load_from_file(void)
 {
     memset(&g_ring, 0, sizeof(g_ring));
@@ -98,7 +101,7 @@ static void records_load_from_file(void)
 
     int n = (total < RECORDS_BUFFER_SIZE) ? (int)total : RECORDS_BUFFER_SIZE;
 
-    FILE* f = fopen(kLogFile, "rb");
+    FILE* f = fopen(kRecordFile, "rb");
     if (!f) return;
 
     long start = total - n;
@@ -123,7 +126,7 @@ int records_read_latest_page(int page, int page_size, RecordEntry* out)
     long start_from_latest = (long)page * (long)page_size; // 최신(0)에서 얼마나 떨어져서 읽을지
     if (start_from_latest >= total) return 0;
 
-    // ✅ 최신 페이지(page=0)만 링버퍼 사용
+    // 최신 페이지(page=0)만 링버퍼 사용
     if (page == 0)
     {
         int n = (g_ring.count < page_size) ? g_ring.count : page_size;
@@ -136,9 +139,22 @@ int records_read_latest_page(int page, int page_size, RecordEntry* out)
         return n;
     }
 
-    // ✅ 그 외 페이지는 파일에서 읽기
+    // 그 외 페이지는 파일에서 읽기
     long remain = total - start_from_latest;
     int n = (remain < page_size) ? (int)remain : page_size;
 
     return records_log_read_latest_range(start_from_latest, n, out);
+}
+
+// 스테이지 클리어 로그는 별도 파일로 분리
+void records_log_append_stage_clear(int stage)
+{
+    if (stage <= 0) return; // 무한모드는 저장 안 함(원하면 바꿔도 됨)
+
+    FILE* f = fopen(kClearFile, "a");
+    if (!f) return;
+
+    // 예: #CLEAR stage=3 ts=1700000000
+    fprintf(f, "#CLEAR stage=%d ts=%ld\n", stage, (long)time(NULL));
+    fclose(f);
 }

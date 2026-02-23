@@ -31,10 +31,14 @@ static void render_sdl(Gui* gui)
     gui_get_size(gui, &w, &h);
 
     const int lh = gui_text_height(gui);
+    const int pad = 14;
 
     GuiColor title_c = (GuiColor){ 235,235,245,255 };
     GuiColor text_c  = (GuiColor){ 230,230,230,255 };
     GuiColor dim_c   = (GuiColor){ 180,180,190,255 };
+
+    GuiColor panel_bg = (GuiColor){ 40,40,48,235 };
+    GuiColor panel_bd = (GuiColor){ 180,180,190,255 };
 
     const char* t1 = "GAME OVER";
     const char* t2 = "R) Restart";
@@ -42,6 +46,25 @@ static void render_sdl(Gui* gui)
     const char* t4 = "Q) Quit";
 
     int y0 = h/2 - (lh*2);
+
+    // ===== panel (텍스트를 사각형으로 감싸기) =====
+    int maxw = 0;
+    int w1 = gui_text_width(gui, t1); if (w1 > maxw) maxw = w1;
+    int w2 = gui_text_width(gui, t2); if (w2 > maxw) maxw = w2;
+    int w3 = gui_text_width(gui, t3); if (w3 > maxw) maxw = w3;
+    int w4 = gui_text_width(gui, t4); if (w4 > maxw) maxw = w4;
+
+    int panel_w = maxw + pad * 2;
+    int panel_h = lh * 5 + pad * 2;
+    int px = (w - panel_w) / 2;
+    int py = y0 - pad;
+    if (px < 12) px = 12;
+    if (px + panel_w > w - 12) px = w - 12 - panel_w;
+    if (py < 12) py = 12;
+    if (py + panel_h > h - 12) py = h - 12 - panel_h;
+
+    gui_fill_rect(gui, (GuiRect){ px, py, panel_w, panel_h }, panel_bg);
+    gui_draw_rect(gui, (GuiRect){ px, py, panel_w, panel_h }, panel_bd);
 
     int x1 = (w - gui_text_width(gui, t1)) / 2; if (x1 < 0) x1 = 0;
     int x2 = (w - gui_text_width(gui, t2)) / 2; if (x2 < 0) x2 = 0;

@@ -21,7 +21,8 @@ static void enter(void)
     records_push(g_last_stage, g_last_score, g_last_blocks_used);
 
     // 클리어 상태 저장(있으면)
-    // stage_set_cleared(g_last_stage);  // 프로젝트에 있으면 활성화
+    stage_mark_cleared(g_selected_stage);
+    records_log_append_stage_clear(g_selected_stage);
 }
 
 // ===== forward =====
@@ -46,10 +47,14 @@ static void render_sdl(Gui* gui)
     gui_get_size(gui, &w, &h);
 
     const int lh = gui_text_height(gui);
+    const int pad = 14;
 
     GuiColor title_c = (GuiColor){ 235,235,245,255 };
     GuiColor text_c  = (GuiColor){ 230,230,230,255 };
     GuiColor dim_c   = (GuiColor){ 180,180,190,255 };
+
+    GuiColor panel_bg = (GuiColor){ 40,40,48,235 };
+    GuiColor panel_bd = (GuiColor){ 180,180,190,255 };
 
     char line1[64];
     snprintf(line1, sizeof(line1), "STAGE %d CLEAR!", g_last_stage);
@@ -60,6 +65,26 @@ static void render_sdl(Gui* gui)
     const char* l5 = "Q) Quit";
 
     int y0 = h/2 - (lh*2);
+
+    // ===== panel (텍스트를 사각형으로 감싸기) =====
+    int maxw = 0;
+    int w1 = gui_text_width(gui, line1); if (w1 > maxw) maxw = w1;
+    int w2 = gui_text_width(gui, l2);    if (w2 > maxw) maxw = w2;
+    int w3 = gui_text_width(gui, l3);    if (w3 > maxw) maxw = w3;
+    int w4 = gui_text_width(gui, l4);    if (w4 > maxw) maxw = w4;
+    int w5 = gui_text_width(gui, l5);    if (w5 > maxw) maxw = w5;
+
+    int panel_w = maxw + pad * 2;
+    int panel_h = lh * 6 + pad * 2;
+    int px = (w - panel_w) / 2;
+    int py = y0 - pad;
+    if (px < 12) px = 12;
+    if (px + panel_w > w - 12) px = w - 12 - panel_w;
+    if (py < 12) py = 12;
+    if (py + panel_h > h - 12) py = h - 12 - panel_h;
+
+    gui_fill_rect(gui, (GuiRect){ px, py, panel_w, panel_h }, panel_bg);
+    gui_draw_rect(gui, (GuiRect){ px, py, panel_w, panel_h }, panel_bd);
 
     int x1 = (w - gui_text_width(gui, line1)) / 2; if (x1 < 0) x1 = 0;
     int x2 = (w - gui_text_width(gui, l2)) / 2; if (x2 < 0) x2 = 0;

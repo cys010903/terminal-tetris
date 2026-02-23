@@ -20,10 +20,10 @@
 #include <ncursesw/ncurses.h>
 #endif
 
-#define LINESCORE1 10
-#define LINESCORE2 30
-#define LINESCORE3 50
-#define LINESCORE4 80
+#define LINESCORE1 1000
+#define LINESCORE2 3000
+#define LINESCORE3 5000
+#define LINESCORE4 8000
 
 // ===== game mode / lineclear anim =====
 typedef enum { GAME_PLAY = 0, GAME_LINECLEAR } GameMode;

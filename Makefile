@@ -9,8 +9,8 @@ SDL_LIBS   := $(shell sdl2-config --libs   2>/dev/null)
 TTF_CFLAGS := $(shell pkg-config --cflags SDL2_ttf 2>/dev/null)
 TTF_LIBS   := $(shell pkg-config --libs   SDL2_ttf 2>/dev/null)
 
-CFLAGS := -Wall -g -D_REENTRANT -DBUILD_SDL $(SDL_CFLAGS) $(TTF_CFLAGS)
-LDLIBS := $(SDL_LIBS) $(TTF_LIBS)
+CFLAGS := -Wall -g -D_REENTRANT -DBUILD_SDL  $(SDL_CFLAGS) $(TTF_CFLAGS)
+LDLIBS := -lm $(SDL_LIBS) $(TTF_LIBS)
 
 SRCS := \
   main_sdl.c gui_sdl.c term_compat.c \
@@ -18,7 +18,7 @@ SRCS := \
   scene_manager.c scene_title.c scene_stage_select.c scene_game.c \
   scene_gameover.c scene_stage_clear.c scene_records.c scene_settings.c \
   tetris.c records.c stage.c settings.c common.c layout.c draw_game.c \
-  draw_sdl.c bg_crt.c titlefall.c
+  draw_sdl.c bg_crt.c titlefall.c 
 
 OBJS := $(SRCS:.c=.o)
 

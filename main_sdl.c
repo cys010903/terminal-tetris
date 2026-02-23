@@ -1,14 +1,16 @@
 // main_sdl.c
+#include <SDL2/SDL.h>
+#include <stdio.h>
+
 #include "gui.h"
 #include "scene_manager.h"
 #include "term_compat.h"
 #include "common.h"
-#include "input_sdl.h"
+#include "input_sdl.h"   // ✅ 여기로
 #include "settings.h"
 #include "records.h"
-#include <SDL2/SDL.h>
-#include <stdio.h>
-#include "input_sdl.h"
+#include "stage.h"
+
 static int map_key(SDL_Keycode sym)
 {
     return ik_from_sdl_key(sym);
@@ -17,7 +19,6 @@ static int map_key(SDL_Keycode sym)
 int main(void)
 {
     Gui gui;
-    // Fixed logical resolution (virtual screen). Window can be resized; output will be letterboxed.
     const int W = 1280, H = 720;
 
     if (!gui_init(&gui, W, H, "Tetris (SDL2)")) {
@@ -31,12 +32,12 @@ int main(void)
     }
 
     gui_set_bg(&gui, (GuiColor){ 35, 40, 55, 255 });
-
     term_bind_gui(&gui);
 
-    // 반드시 초기화 (g_settings.key_*가 0이면 입력이 안 먹는 것처럼 보임)
     settings_load();
     records_init();
+    stage_clear_load();
+
     scene_set(&g_scene_title);
 
     const uint32_t target_frame_ms = 16;
