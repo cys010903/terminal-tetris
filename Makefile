@@ -16,7 +16,7 @@ CFLAGS := -Wall -g -D_REENTRANT -DBUILD_SDL $(SDL_CFLAGS) $(TTF_CFLAGS) $(IMG_CF
 LDLIBS := $(SDL_LIBS) $(TTF_LIBS) $(IMG_LIBS) -lm
 
 SRCS := \
-  main_sdl.c gui_sdl.c term_compat.c \
+  main_sdl.c gui_sdl.c term_compat.c sdl_layout.c \
   input_sdl.c \
   scene_manager.c scene_title.c scene_stage_select.c scene_game.c \
   scene_gameover.c scene_stage_clear.c scene_records.c scene_settings.c \

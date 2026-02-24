@@ -1,27 +1,24 @@
+#include <stdio.h>
+
 #include "draw_game.h"
 #include "layout.h"
 #include "draw.h"
 #include "tetris.h"
 #include "settings.h"
 #include "term_compat.h"
-
-#ifndef BUILD_SDL
-#include <ncursesw/ncurses.h>
-#else
+#include "sdl_layout.h"
 #include "gui.h"
-#endif
 
 static void draw_hud(const GameView* v, const HudLayout* l)
 {
-#ifdef BUILD_SDL
     Gui* gui = term_get_gui();
     if (!gui) return;
 
     int cw = 12, ch = 18;
-    term_get_cell_px(&cw, &ch);
+    sdl_layout_get_cell_px(&cw, &ch);
 
     int ox = 0, oy = 0;
-    term_get_board_origin_px(&ox, &oy);
+    sdl_layout_get_board_origin_px(&ox, &oy);
 
     // ===== HOLD =====
     if (v->hold_enabled) {
@@ -66,32 +63,11 @@ static void draw_hud(const GameView* v, const HudLayout* l)
         gui_draw_text(gui, px - 6*cw, py + 2*ch, (GuiColor){235,235,245,255}, buf);
     }
 
-#else
-    mvaddstr(1, l->ui_left_col, "NEXT");
-    for (int i = 0; i < 5; i++) {
-        int top = l->next_top_row + i * BLOCK_SIZE;
-        draw_mino_preview(top, l->ui_left_col, v->next_queue[i], 0);
-    }
-
-    mvprintw(l->info_y_row + 0, l->info_x_col, "STAGE : %d", v->stage);
-    mvprintw(l->info_y_row + 1, l->info_x_col, "SCORE : %d", v->score);
-
-    if (v->infinite_mode) {
-        mvprintw(l->info_y_row + 2, l->info_x_col, "LEVEL : %d", v->level);
-        mvprintw(l->info_y_row + 3, l->info_x_col, "LINES : %d", v->lines_total);
-    } else {
-        mvprintw(l->info_y_row + 2, l->info_x_col, "GOAL  : %d", v->goal);
-    }
-#endif
 }
 
 void draw_game(const GameView* v)
 {
     if (!v) return;
-
-#ifndef BUILD_SDL
-    erase();
-#endif
 
     draw_board(v->board);
 
@@ -110,7 +86,4 @@ void draw_game(const GameView* v)
     layout_build(&l);
     draw_hud(v, &l);
 
-#ifndef BUILD_SDL
-    refresh();
-#endif
 }

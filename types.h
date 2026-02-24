@@ -6,6 +6,8 @@ typedef struct {
     int blocks_used;
 } RecordEntry;
 
+
+
 typedef struct Scene {
     const char* name;
     void (*enter)(void);

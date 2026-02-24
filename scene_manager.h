@@ -2,11 +2,7 @@
 
 #include "scene.h"
 
-#ifdef BUILD_SDL
 #include "term_compat.h"
-#else
-#include "term.h"
-#endif
 // =============================================================
 // Global Scene objects (defined in each scene_*.c)
 //

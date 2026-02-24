@@ -16,10 +16,6 @@
 #include "gui.h"
 #include "input_keys.h"
 
-#ifndef BUILD_SDL
-#include <ncursesw/ncurses.h>
-#endif
-
 #define LINESCORE1 1000
 #define LINESCORE2 3000
 #define LINESCORE3 5000
@@ -298,9 +294,6 @@ static void render_overlay(void)
         return;
     }
 
-#ifndef BUILD_SDL
-    // ncurses 퍼즈는 기존 코드 유지(필요하면 여기 넣기)
-#endif
 }
 
 static void render(void)

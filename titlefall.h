@@ -1,6 +1,5 @@
 #pragma once
 
-#ifdef BUILD_SDL
 #include "gui.h"
 
 #ifndef TITLEFALL_MAX
@@ -38,4 +37,3 @@ void titlefall_set_enabled(TitleFall* t, int on);
 void titlefall_update(TitleFall* t, int dt_ms);
 void titlefall_render(Gui* gui, const TitleFall* t);
 
-#endif

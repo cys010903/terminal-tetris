@@ -1,4 +1,6 @@
 #include <string.h>
+#include <stdio.h>
+#include <math.h>
 
 #include "scene.h"
 #include "scene_manager.h"
@@ -9,9 +11,6 @@
 #include "term_compat.h"
 #include "gui.h"
 
-#ifndef BUILD_SDL
-#include <ncurses.h>
-#endif
 
 extern int g_last_stage, g_last_score, g_last_blocks_used;
 
@@ -27,18 +26,12 @@ static void enter(void)
 
 // ===== forward =====
 static void render_sdl(Gui* gui);
-#ifndef BUILD_SDL
-static void render_ncu(void);
-#endif
 
 static void render(void)
 {
     Gui* gui = term_get_gui();
     if (gui) { render_sdl(gui); return; }
 
-#ifndef BUILD_SDL
-    render_ncu();
-#endif
 }
 
 static void render_sdl(Gui* gui)
@@ -51,7 +44,6 @@ static void render_sdl(Gui* gui)
 
     GuiColor title_c = (GuiColor){ 235,235,245,255 };
     GuiColor text_c  = (GuiColor){ 230,230,230,255 };
-    GuiColor dim_c   = (GuiColor){ 180,180,190,255 };
 
     GuiColor panel_bg = (GuiColor){ 40,40,48,235 };
     GuiColor panel_bd = (GuiColor){ 180,180,190,255 };
@@ -96,21 +88,8 @@ static void render_sdl(Gui* gui)
     gui_draw_text(gui, x2, y0 + lh*2, text_c,  l2);
     gui_draw_text(gui, x3, y0 + lh*3, text_c,  l3);
     gui_draw_text(gui, x4, y0 + lh*4, text_c,  l4);
-    gui_draw_text(gui, x5, y0 + lh*5, dim_c,   l5);
+    gui_draw_text(gui, x5, y0 + lh*5, text_c,   l5);
 }
-
-#ifndef BUILD_SDL
-static void render_ncu(void)
-{
-    erase();
-    mvprintw(10, 10, "STAGE %d CLEAR!", g_last_stage);
-    mvprintw(12, 10, "N) Next Stage");
-    mvprintw(13, 10, "R) Restart");
-    mvprintw(14, 10, "T) Title");
-    mvprintw(15, 10, "Q) Quit");
-    refresh();
-}
-#endif
 
 static void handle_input(int ch)
 {

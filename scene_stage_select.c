@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
+#include <stdint.h>
 
 #include "scene.h"
 #include "scene_manager.h"
@@ -101,7 +102,7 @@ static void move_cursor_grid(int dr, int dc)
 // ======= RENDER =======
 static void render_sdl(Gui* gui)
 {
-    static Uint32 glow_time = 0;
+    static uint32_t glow_time = 0;
     glow_time += 16;   // update에서 dt 넘겨도 되지만 단순화
 
     int win_w = 0, win_h = 0;

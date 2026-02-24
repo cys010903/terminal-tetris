@@ -1,6 +1,4 @@
 #include "bg_crt.h"
-
-#ifdef BUILD_SDL
 #include <math.h>
 
 static float clampf(float x, float a, float b)
@@ -92,4 +90,3 @@ void crt_bg_render(Gui* gui, const CrtBg* b)
     gui_fill_rect(gui, (GuiRect){0,0,pad,h}, (GuiColor){0,0,0,40});
     gui_fill_rect(gui, (GuiRect){w - pad,0,pad,h}, (GuiColor){0,0,0,40});
 }
-#endif

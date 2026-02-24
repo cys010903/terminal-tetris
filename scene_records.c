@@ -10,9 +10,6 @@
 #include "term_compat.h"
 #include "gui.h"
 
-#ifndef BUILD_SDL
-#include <ncurses.h>
-#endif
 
 static long page = 0;
 static const int page_size = 10;
@@ -33,18 +30,12 @@ static void clamp_page(long total)
 
 // ===== forward =====
 static void render_sdl(Gui* gui);
-#ifndef BUILD_SDL
-static void render_ncu(void);
-#endif
+
 
 static void render(void)
 {
     Gui* gui = term_get_gui();
     if (gui) { render_sdl(gui); return; }
-
-#ifndef BUILD_SDL
-    render_ncu();
-#endif
 }
 
 static void render_sdl(Gui* gui)
@@ -169,65 +160,6 @@ static void render_sdl(Gui* gui)
 
     gui_draw_text(gui, px + inner_pad, py + panel_h - inner_pad - lh, dim_c, footer);
 }
-
-#ifndef BUILD_SDL
-static void render_list_header(int y)
-{
-    mvprintw(y,   4, "No  Stage   Score   BlocksUsed");
-    mvprintw(y+1, 4, "--------------------------------");
-}
-
-static void render_ncu(void)
-{
-    erase();
-
-    int h, w;
-    getmaxyx(stdscr, h, w);
-
-    mvprintw(1, (w - 14) / 2, "=== RECORDS ===");
-
-    long total = records_log_count();
-    clamp_page(total);
-
-    long total_pages = (total <= 0)
-        ? 0
-        : ((total - 1) / page_size) + 1;
-
-    mvprintw(2, 2, "Total %ld   Page %ld / %ld",
-             total,
-             (total == 0) ? 0 : page + 1,
-             total_pages);
-
-    if (total == 0) {
-        mvprintw(h/2, (w - 16)/2, "No records yet.");
-        refresh();
-        return;
-    }
-
-    RecordEntry tmp[page_size];
-    int n = records_read_latest_page(page, page_size, tmp);
-
-    int start_y = 4;
-    render_list_header(start_y);
-    start_y += 2;
-
-    for (int i = 0; i < n; i++)
-    {
-        long global_no = total - (page * page_size + i);
-
-        char stage_buf[8];
-        if (tmp[i].stage == 0) strcpy(stage_buf, "INF");
-        else snprintf(stage_buf, sizeof(stage_buf), "%d", tmp[i].stage);
-
-        mvprintw(start_y + i, 4,
-            "%3ld  %5s  %7d  %10d",
-            global_no, stage_buf, tmp[i].score, tmp[i].blocks_used);
-    }
-
-    mvprintw(h - 2, 2, "[A/←] Prev  [D/→] Next  [ESC] Back");
-    refresh();
-}
-#endif
 
 // scene_records.c
 static void handle_input(int ch)

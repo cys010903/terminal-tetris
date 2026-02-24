@@ -1,13 +1,28 @@
 #include "gui.h"
-#include "term_compat.h"
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL_image.h>
-#include <stdint.h>
+
 #include <stdlib.h>
-#include <string.h>
 #include <stdio.h>
+
+// ===== Opaque types definition (SDL only, not exposed in headers) =====
+struct Gui {
+    SDL_Window* win;
+    SDL_Renderer* ren;
+    TTF_Font* font;
+    GuiColor bg;
+    int font_h;
+    int logical_w;
+    int logical_h;
+};
+
+struct GuiTexture {
+    SDL_Texture* tex;
+    int w;
+    int h;
+};
 
 static void apply_logical_letterbox(Gui* gui)
 {
@@ -35,41 +50,26 @@ static void apply_logical_letterbox(Gui* gui)
     SDL_RenderSetScale(gui->ren, s, s);
 }
 
-int gui_init(Gui* gui, int w, int h, const char* title)
+static int gui_init_inplace(Gui* gui, int w, int h, const char* title)
 {
     if (!gui) return 0;
-    *gui = (Gui){0};
+    *gui = (struct Gui){0};
 
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
-        return 0;
-    }
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) return 0;
+    if (TTF_Init() != 0) { SDL_Quit(); return 0; }
 
-    if (TTF_Init() != 0) {
-        SDL_Quit();
-        return 0;
-    }
-
-    // PNG 로드용
     int img_flags = IMG_INIT_PNG;
     if ((IMG_Init(img_flags) & img_flags) != img_flags) {
-        TTF_Quit();
-        SDL_Quit();
-        return 0;
+        TTF_Quit(); SDL_Quit(); return 0;
     }
 
-    // 창 리사이즈 허용 (논리 해상도에 맞춰 레터박싱)
     SDL_Window* win = SDL_CreateWindow(
         title,
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         w, h,
         SDL_WINDOW_RESIZABLE
     );
-    if (!win) {
-        IMG_Quit();
-        TTF_Quit();
-        SDL_Quit();
-        return 0;
-    }
+    if (!win) { IMG_Quit(); TTF_Quit(); SDL_Quit(); return 0; }
 
     SDL_Renderer* ren = SDL_CreateRenderer(
         win, -1,
@@ -77,9 +77,7 @@ int gui_init(Gui* gui, int w, int h, const char* title)
     );
     if (!ren) {
         SDL_DestroyWindow(win);
-        IMG_Quit();
-        TTF_Quit();
-        SDL_Quit();
+        IMG_Quit(); TTF_Quit(); SDL_Quit();
         return 0;
     }
 
@@ -89,7 +87,6 @@ int gui_init(Gui* gui, int w, int h, const char* title)
     gui->font = NULL;
     gui->font_h = 0;
 
-    // logical resolution = init size (virtual screen)
     gui->logical_w = w;
     gui->logical_h = h;
 
@@ -97,7 +94,7 @@ int gui_init(Gui* gui, int w, int h, const char* title)
     return 1;
 }
 
-void gui_shutdown(Gui* gui)
+static void gui_shutdown_inplace(Gui* gui)
 {
     if (!gui) return;
 
@@ -109,6 +106,25 @@ void gui_shutdown(Gui* gui)
     IMG_Quit();
     TTF_Quit();
     SDL_Quit();
+}
+
+Gui* gui_create(int w, int h, const char* title)
+{
+    Gui* gui = (Gui*)calloc(1, sizeof(Gui));
+    if (!gui) return NULL;
+
+    if (!gui_init_inplace(gui, w, h, title)) {
+        free(gui);
+        return NULL;
+    }
+    return gui;
+}
+
+void gui_destroy(Gui* gui)
+{
+    if (!gui) return;
+    gui_shutdown_inplace(gui);
+    free(gui);
 }
 
 void gui_poll_input(Gui* gui, GuiInput* in)
@@ -140,13 +156,11 @@ void gui_begin_frame(Gui* gui)
 {
     if (!gui) return;
 
-    // Clear whole window (including letterbox area)
     SDL_RenderSetViewport(gui->ren, NULL);
     SDL_RenderSetScale(gui->ren, 1.0f, 1.0f);
     SDL_SetRenderDrawColor(gui->ren, gui->bg.r, gui->bg.g, gui->bg.b, gui->bg.a);
     SDL_RenderClear(gui->ren);
 
-    // Then apply letterboxed logical viewport for all subsequent draw calls.
     apply_logical_letterbox(gui);
 }
 
@@ -159,7 +173,6 @@ void gui_end_frame(Gui* gui)
 void gui_get_size(Gui* gui, int* out_w, int* out_h)
 {
     if (!gui) return;
-    // Return logical size so layout is stable and never "falls out" of the window.
     if (out_w) *out_w = gui->logical_w;
     if (out_h) *out_h = gui->logical_h;
 }
@@ -202,7 +215,7 @@ static const char* pick_default_font_path(void)
     return NULL;
 }
 
-int  gui_text_init(Gui* gui, const char* font_path, int pt_size)
+int gui_text_init(Gui* gui, const char* font_path, int pt_size)
 {
     if (!gui) return 0;
 
@@ -260,7 +273,7 @@ void gui_draw_text(Gui* gui, int x, int y, GuiColor c, const char* utf8)
 }
 
 /* ===== image (SDL2_image) ===== */
-SDL_Texture* gui_load_texture(Gui* gui, const char* path, int* out_w, int* out_h)
+GuiTexture* gui_load_texture(Gui* gui, const char* path, int* out_w, int* out_h)
 {
     if (out_w) *out_w = 0;
     if (out_h) *out_h = 0;
@@ -269,26 +282,41 @@ SDL_Texture* gui_load_texture(Gui* gui, const char* path, int* out_w, int* out_h
     SDL_Surface* surf = IMG_Load(path);
     if (!surf) return NULL;
 
-    SDL_Texture* tex = SDL_CreateTextureFromSurface(gui->ren, surf);
-    if (tex) {
-        if (out_w) *out_w = surf->w;
-        if (out_h) *out_h = surf->h;
-    }
+    SDL_Texture* t = SDL_CreateTextureFromSurface(gui->ren, surf);
+    if (!t) { SDL_FreeSurface(surf); return NULL; }
+
+    GuiTexture* gt = (GuiTexture*)calloc(1, sizeof(GuiTexture));
+    if (!gt) { SDL_DestroyTexture(t); SDL_FreeSurface(surf); return NULL; }
+
+    gt->tex = t;
+    gt->w = surf->w;
+    gt->h = surf->h;
+
+    if (out_w) *out_w = gt->w;
+    if (out_h) *out_h = gt->h;
+
     SDL_FreeSurface(surf);
-    return tex;
+    return gt;
 }
 
-void gui_draw_texture(Gui* gui, SDL_Texture* tex, GuiRect dst)
+void gui_draw_texture(Gui* gui, GuiTexture* tex, GuiRect dst)
 {
-    if (!gui || !gui->ren || !tex) return;
-    SDL_Rect r = to_sdl_rect(dst);
-    SDL_RenderCopy(gui->ren, tex, NULL, &r);
+    if (!gui || !gui->ren || !tex || !tex->tex) return;
+
+    SDL_Rect r;
+    r.x = dst.x; r.y = dst.y; r.w = dst.w; r.h = dst.h;
+
+    SDL_RenderCopy(gui->ren, tex->tex, NULL, &r);
 }
 
-void gui_destroy_texture(SDL_Texture** tex)
+void gui_destroy_texture(GuiTexture** tex)
 {
     if (!tex || !*tex) return;
-    SDL_DestroyTexture(*tex);
+
+    if ((*tex)->tex) SDL_DestroyTexture((*tex)->tex);
+    (*tex)->tex = NULL;
+
+    free(*tex);
     *tex = NULL;
 }
 
@@ -300,10 +328,4 @@ uint32_t gui_ticks_ms(void)
 void gui_sleep_ms(uint32_t ms)
 {
     SDL_Delay(ms);
-}
-
-SDL_Renderer* gui_sdl_get_renderer(Gui* gui)
-{
-    if (!gui) return NULL;
-    return gui->ren;
 }

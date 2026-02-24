@@ -1,6 +1,6 @@
 #include "titlefall.h"
 
-#ifdef BUILD_SDL
+
 #include "tetris.h"   // BLOCK_KIND
 #include <string.h>
 #include <math.h>
@@ -199,4 +199,3 @@ void titlefall_render(Gui* gui, const TitleFall* t)
         }
     }
 }
-#endif

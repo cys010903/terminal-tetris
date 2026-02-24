@@ -8,7 +8,6 @@
 #include "gui.h"
 #include "input_keys.h"
 #include "titlefall.h"
-#include <SDL2/SDL.h>
 #include <string.h>
 
 static int cursor = 0;
@@ -16,7 +15,7 @@ static int cursor = 0;
 static const char* menu[] = { "START", "RECORDS", "SETTINGS", "EXIT" };
 static const int MENU_COUNT = (int)(sizeof(menu) / sizeof(menu[0]));
 
-static SDL_Texture* s_logo = NULL;
+static GuiTexture* s_logo = NULL;
 static int s_logo_w = 0;
 static int s_logo_h = 0;
 
@@ -56,24 +55,19 @@ static void render(void)
     int win_w = 0, win_h = 0;
     gui_get_size(gui, &win_w, &win_h);
 
-    // 로고 (assets/logo.png)
     logo_ensure_loaded(gui);
     int y = 50;
+
     if (s_logo && s_logo_w > 0 && s_logo_h > 0) {
         int target_w = (int)(win_w * 0.60f);
-        if (target_w > win_w - 80) target_w = win_w - 80;
-        if (target_w < 200) target_w = 200;
-
         int target_h = (int)((float)target_w * ((float)s_logo_h / (float)s_logo_w));
-        GuiRect dst = { (win_w - target_w) / 2, y, target_w, target_h };
+        GuiRect dst = { (win_w - target_w)/2, y, target_w, target_h };
         gui_draw_texture(gui, s_logo, dst);
-        y = dst.y + dst.h + 35;
     } else {
         draw_center_text(gui, y, (GuiColor){ 235,235,235,255 }, "TETRIS");
         y += 80;
     }
 
-    // 메뉴 레이아웃
     const int item_w = 260;
     const int item_h = 46;
     const int gap    = 14;

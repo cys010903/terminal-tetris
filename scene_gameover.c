@@ -35,7 +35,6 @@ static void render_sdl(Gui* gui)
 
     GuiColor title_c = (GuiColor){ 235,235,245,255 };
     GuiColor text_c  = (GuiColor){ 230,230,230,255 };
-    GuiColor dim_c   = (GuiColor){ 180,180,190,255 };
 
     GuiColor panel_bg = (GuiColor){ 40,40,48,235 };
     GuiColor panel_bd = (GuiColor){ 180,180,190,255 };
@@ -74,7 +73,7 @@ static void render_sdl(Gui* gui)
     gui_draw_text(gui, x1, y0 + lh*0, title_c, t1);
     gui_draw_text(gui, x2, y0 + lh*2, text_c,  t2);
     gui_draw_text(gui, x3, y0 + lh*3, text_c,  t3);
-    gui_draw_text(gui, x4, y0 + lh*4, dim_c,   t4);
+    gui_draw_text(gui, x4, y0 + lh*4, text_c,   t4);
 }
 
 

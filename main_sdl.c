@@ -6,7 +6,7 @@
 #include "scene_manager.h"
 #include "term_compat.h"
 #include "common.h"
-#include "input_sdl.h"   // ✅ 여기로
+#include "input_sdl.h"
 #include "settings.h"
 #include "records.h"
 #include "stage.h"
@@ -19,21 +19,22 @@ static int map_key(SDL_Keycode sym)
 int main(void)
 {
     srand((unsigned int)time(NULL));
-    Gui gui;
-    const int W = 1280, H = 720;
 
-    if (!gui_init(&gui, W, H, "Tetris (SDL2)")) {
+    const int W = 1280, H = 720;
+    Gui* gui = gui_create(W, H, "Tetris (SDL2)");
+    if (!gui) {
         fprintf(stderr, "gui_init failed\n");
         return 1;
     }
-    if (!gui_text_init(&gui, NULL, 18)) {
+
+    if (!gui_text_init(gui, NULL, 18)) {
         fprintf(stderr, "gui_text_init failed\n");
-        gui_shutdown(&gui);
+        gui_destroy(gui);
         return 1;
     }
 
-    gui_set_bg(&gui, (GuiColor){ 35, 40, 55, 255 });
-    term_bind_gui(&gui);
+    gui_set_bg(gui, (GuiColor){ 35, 40, 55, 255 });
+    term_bind_gui(gui);
 
     settings_load();
     records_init();
@@ -63,15 +64,15 @@ int main(void)
 
         scene_update((int)dt);
 
-        gui_begin_frame(&gui);
+        gui_begin_frame(gui);
         scene_render();
-        gui_end_frame(&gui);
+        gui_end_frame(gui);
 
         uint32_t used = gui_ticks_ms() - now;
         if (used < target_frame_ms) gui_sleep_ms(target_frame_ms - used);
     }
 
 quit:
-    gui_shutdown(&gui);
+    gui_destroy(gui);
     return 0;
 }
