@@ -1,12 +1,11 @@
 #include "settings.h"
-#include "input_keys.h"   // ✅ IK_* 사용
+#include "input_keys.h"
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+
 #define SETTINGS_FILE "settings.cfg"
 #define SETTINGS_VERSION 1
-
-GameSettings g_settings;
 
 static void trim(char* s) {
     if (!s) return;
@@ -36,51 +35,56 @@ static bool parse_bool(const char* v, bool* out) {
     return false;
 }
 
-static const char* ik_name(InputKey k) {
+static const char* ik_name_local(InputKey k) {
     switch (k) {
-    case IK_LEFT:  return "LEFT";
-    case IK_RIGHT: return "RIGHT";
-    case IK_DOWN:  return "DOWN";
-    case IK_UP:    return "UP";
-    case IK_CANCEL:return "ESC";
-    default:       return "NONE";
+    case IK_LEFT:   return "LEFT";
+    case IK_RIGHT:  return "RIGHT";
+    case IK_DOWN:   return "DOWN";
+    case IK_UP:     return "UP";
+    case IK_CANCEL: return "ESC";
+    default:        return "NONE";
     }
 }
 
 static bool parse_ik(const char* v, InputKey* out) {
     if (!v || !out) return false;
-    if (streq_ci(v, "LEFT"))  { *out = IK_LEFT;  return true; }
-    if (streq_ci(v, "RIGHT")) { *out = IK_RIGHT; return true; }
-    if (streq_ci(v, "DOWN"))  { *out = IK_DOWN;  return true; }
-    if (streq_ci(v, "UP"))    { *out = IK_UP;    return true; }
-    if (streq_ci(v, "ESC"))   { *out = IK_CANCEL;return true; }
-    if (streq_ci(v, "NONE"))  { *out = IK_NONE;  return true; }
+    if (streq_ci(v, "LEFT"))  { *out = IK_LEFT;   return true; }
+    if (streq_ci(v, "RIGHT")) { *out = IK_RIGHT;  return true; }
+    if (streq_ci(v, "DOWN"))  { *out = IK_DOWN;   return true; }
+    if (streq_ci(v, "UP"))    { *out = IK_UP;     return true; }
+    if (streq_ci(v, "ESC"))   { *out = IK_CANCEL; return true; }
+    if (streq_ci(v, "NONE"))  { *out = IK_NONE;   return true; }
     return false;
-}
-
-void settings_set_defaults(void) {
-    g_settings.version = SETTINGS_VERSION;
-    g_settings.randomizer = RNG_7BAG;
-    g_settings.ghost = true;
-    g_settings.hold  = true;
-    g_settings.wasd  = WASD_OFF;
-
-    g_settings.key_left   = IK_LEFT;
-    g_settings.key_right  = IK_RIGHT;
-    g_settings.key_down   = IK_DOWN;
-    g_settings.key_rotate = IK_UP;
-
-    g_settings.key_page_prev = IK_LEFT;
-    g_settings.key_page_next = IK_RIGHT;
-    g_settings.key_back      = IK_CANCEL;
 }
 
 const char* settings_randomizer_name(RandomizerMode m) { return (m == RNG_7BAG) ? "7-BAG" : "PURE"; }
 const char* settings_onoff_name(bool v) { return v ? "ON" : "OFF"; }
 const char* settings_wasd_name(WasdMode m) { return (m == WASD_ON) ? "ON" : "OFF"; }
 
-void settings_load(void) {
-    settings_set_defaults();
+void settings_set_defaults(GameSettings* s)
+{
+    if (!s) return;
+
+    s->version = SETTINGS_VERSION;
+    s->randomizer = RNG_7BAG;
+    s->ghost = true;
+    s->hold  = true;
+    s->wasd  = WASD_OFF;
+
+    s->key_left   = IK_LEFT;
+    s->key_right  = IK_RIGHT;
+    s->key_down   = IK_DOWN;
+    s->key_rotate = IK_UP;
+
+    s->key_page_prev = IK_LEFT;
+    s->key_page_next = IK_RIGHT;
+    s->key_back      = IK_CANCEL;
+}
+
+void settings_load(GameSettings* s)
+{
+    if (!s) return;
+    settings_set_defaults(s);
 
     FILE* f = fopen(SETTINGS_FILE, "r");
     if (!f) return;
@@ -100,43 +104,46 @@ void settings_load(void) {
         trim(val);
 
         if (streq_ci(key, "randomizer")) {
-            if (streq_ci(val, "7bag") || streq_ci(val, "7-bag")) g_settings.randomizer = RNG_7BAG;
-            else g_settings.randomizer = RNG_PURE;
+            if (streq_ci(val, "7bag") || streq_ci(val, "7-bag")) s->randomizer = RNG_7BAG;
+            else s->randomizer = RNG_PURE;
         } else if (streq_ci(key, "ghost")) {
-            bool b; if (parse_bool(val, &b)) g_settings.ghost = b;
+            bool b; if (parse_bool(val, &b)) s->ghost = b;
         } else if (streq_ci(key, "hold")) {
-            bool b; if (parse_bool(val, &b)) g_settings.hold = b;
+            bool b; if (parse_bool(val, &b)) s->hold = b;
         } else if (streq_ci(key, "wasd")) {
-            bool b; if (parse_bool(val, &b)) g_settings.wasd = b ? WASD_ON : WASD_OFF;
+            bool b; if (parse_bool(val, &b)) s->wasd = b ? WASD_ON : WASD_OFF;
         } else if (streq_ci(key, "key_left")) {
-            InputKey k; if (parse_ik(val, &k)) g_settings.key_left = k;
+            InputKey k; if (parse_ik(val, &k)) s->key_left = k;
         } else if (streq_ci(key, "key_right")) {
-            InputKey k; if (parse_ik(val, &k)) g_settings.key_right = k;
+            InputKey k; if (parse_ik(val, &k)) s->key_right = k;
         } else if (streq_ci(key, "key_down")) {
-            InputKey k; if (parse_ik(val, &k)) g_settings.key_down = k;
+            InputKey k; if (parse_ik(val, &k)) s->key_down = k;
         } else if (streq_ci(key, "key_rotate")) {
-            InputKey k; if (parse_ik(val, &k)) g_settings.key_rotate = k;
+            InputKey k; if (parse_ik(val, &k)) s->key_rotate = k;
         }
     }
 
     fclose(f);
 }
 
-void settings_save(void) {
+void settings_save(const GameSettings* s)
+{
+    if (!s) return;
+
     FILE* f = fopen(SETTINGS_FILE, "w");
     if (!f) return;
 
     fprintf(f, "# terminal-tetris settings\n");
     fprintf(f, "version=%d\n", SETTINGS_VERSION);
-    fprintf(f, "randomizer=%s\n", (g_settings.randomizer == RNG_7BAG) ? "7bag" : "pure");
-    fprintf(f, "ghost=%d\n", g_settings.ghost ? 1 : 0);
-    fprintf(f, "hold=%d\n", g_settings.hold ? 1 : 0);
-    fprintf(f, "wasd=%d\n", (g_settings.wasd == WASD_ON) ? 1 : 0);
+    fprintf(f, "randomizer=%s\n", (s->randomizer == RNG_7BAG) ? "7bag" : "pure");
+    fprintf(f, "ghost=%d\n", s->ghost ? 1 : 0);
+    fprintf(f, "hold=%d\n", s->hold ? 1 : 0);
+    fprintf(f, "wasd=%d\n", (s->wasd == WASD_ON) ? 1 : 0);
 
-    fprintf(f, "key_left=%s\n",   ik_name(g_settings.key_left));
-    fprintf(f, "key_right=%s\n",  ik_name(g_settings.key_right));
-    fprintf(f, "key_down=%s\n",   ik_name(g_settings.key_down));
-    fprintf(f, "key_rotate=%s\n", ik_name(g_settings.key_rotate));
+    fprintf(f, "key_left=%s\n",   ik_name_local(s->key_left));
+    fprintf(f, "key_right=%s\n",  ik_name_local(s->key_right));
+    fprintf(f, "key_down=%s\n",   ik_name_local(s->key_down));
+    fprintf(f, "key_rotate=%s\n", ik_name_local(s->key_rotate));
 
     fclose(f);
 }

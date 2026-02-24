@@ -1,6 +1,6 @@
 // app_context.h
 #pragma once
-
+#include "settings.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -11,6 +11,7 @@ typedef struct AppContext {
     int last_stage;
     int last_score;
     int last_blocks_used;
+    GameSettings settings;
 } AppContext;
 
 AppContext* app_ctx(void);

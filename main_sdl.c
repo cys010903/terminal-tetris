@@ -10,6 +10,7 @@
 #include "settings.h"
 #include "records.h"
 #include "stage.h"
+#include "app_context.h"
 
 static int map_key(SDL_Keycode sym)
 {
@@ -18,6 +19,8 @@ static int map_key(SDL_Keycode sym)
 
 int main(void)
 {
+    AppContext* ctx = app_ctx();
+
     srand((unsigned int)time(NULL));
 
     const int W = 1280, H = 720;
@@ -36,7 +39,7 @@ int main(void)
     gui_set_bg(gui, (GuiColor){ 35, 40, 55, 255 });
     term_bind_gui(gui);
 
-    settings_load();
+    settings_load(&ctx->settings);
     records_init();
     stage_clear_load();
 
@@ -73,6 +76,7 @@ int main(void)
     }
 
 quit:
+    records_flush();
     gui_destroy(gui);
     return 0;
 }

@@ -161,12 +161,15 @@ static void render_sdl(Gui* gui)
 }
 
 // scene_records.c
-static void handle_input(AppContext* ctx, int ch) { (void)ctx;
-    if (ch == IK_LEFT || ch == 'a' || ch == 'A' || ch == g_settings.key_page_prev) {
+static void handle_input(AppContext* ctx, int ch)
+{
+    GameSettings* settings = &ctx->settings;
+
+    if (ch == IK_LEFT || ch == 'a' || ch == 'A' || ch == settings->key_page_prev) {
         page--;
-    } else if (ch == IK_RIGHT || ch == 'd' || ch == 'D' || ch == g_settings.key_page_next) {
+    } else if (ch == IK_RIGHT || ch == 'd' || ch == 'D' || ch == settings->key_page_next) {
         page++;
-    } else if (ch == IK_CANCEL || ch == 'b' || ch == 'B' || ch == g_settings.key_back) {
+    } else if (ch == IK_CANCEL || ch == 'b' || ch == 'B' || ch == settings->key_back) {
         scene_set(&g_scene_title);
     }
 }

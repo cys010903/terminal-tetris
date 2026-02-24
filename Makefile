@@ -1,42 +1,41 @@
-# Makefile (SDL-only)
+CC := gcc
 
-CC     := gcc
 TARGET := main
+BUILD  := build
 
-SDL_CFLAGS := $(shell sdl2-config --cflags 2>/dev/null)
-SDL_LIBS   := $(shell sdl2-config --libs   2>/dev/null)
+# ===== SDL (필요한 것만) =====
+SDL_PKGS := sdl2 SDL2_ttf
+# SDL2_image 쓰는 프로젝트면 자동으로 링크/플래그 추가(IMG_Load 등)
+ifneq ($(shell pkg-config --exists SDL2_image && echo yes),)
+SDL_PKGS += SDL2_image
+endif
 
-TTF_CFLAGS := $(shell pkg-config --cflags SDL2_ttf 2>/dev/null)
-TTF_LIBS   := $(shell pkg-config --libs   SDL2_ttf 2>/dev/null)
+CFLAGS   := -std=c11 -Wall -Wextra -g -D_REENTRANT -DBUILD_SDL
+CPPFLAGS := -Icore -Iapp -Iplatform -Ipersist -Ishared
+SDL_CFLAGS := $(shell pkg-config --cflags $(SDL_PKGS))
+SDL_LIBS   := $(shell pkg-config --libs $(SDL_PKGS))
 
-IMG_CFLAGS := $(shell pkg-config --cflags SDL2_image 2>/dev/null)
-IMG_LIBS   := $(shell pkg-config --libs   SDL2_image 2>/dev/null)
+LDFLAGS :=
+LDLIBS  := $(SDL_LIBS) -lm
 
-CFLAGS := -Wall -g -D_REENTRANT -DBUILD_SDL $(SDL_CFLAGS) $(TTF_CFLAGS) $(IMG_CFLAGS)
-LDLIBS := $(SDL_LIBS) $(TTF_LIBS) $(IMG_LIBS) -lm
-
-SRCS := \
-  main_sdl.c gui_sdl.c term_compat.c sdl_layout.c \
-  input_sdl.c \
-  scene_manager.c scene_title.c scene_stage_select.c scene_game.c \
-  scene_gameover.c scene_stage_clear.c scene_records.c scene_settings.c \
-  tetris.c records.c stage.c settings.c common.c layout.c draw_game.c \
-  draw_sdl.c bg_crt.c titlefall.c app_context.c
-
-OBJS := $(SRCS:.c=.o)
+# ===== Sources =====
+SRCS := main_sdl.c $(shell find core app platform persist shared -maxdepth 1 -name '*.c' -print)
+OBJS := $(patsubst %.c,$(BUILD)/%.o,$(SRCS))
 
 .PHONY: all clean run
 
 all: $(TARGET)
 
 $(TARGET): $(OBJS)
-	$(CC) $(OBJS) -o $@ $(LDLIBS)
+	$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)
 
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+# build/ 아래에 폴더 구조 유지해서 .o 생성
+$(BUILD)/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) $(CPPFLAGS) $(SDL_CFLAGS) -c $< -o $@
+
+clean:
+	rm -rf $(BUILD) $(TARGET)
 
 run: $(TARGET)
 	./$(TARGET)
-
-clean:
-	rm -f $(OBJS) $(TARGET)

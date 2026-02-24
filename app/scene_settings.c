@@ -19,32 +19,36 @@ typedef enum {
     ITEM_COUNT
 } Item;
 
+static GameSettings* settings = NULL;
 static int cursor = 0;
 
-static void enter(AppContext* ctx) { (void)ctx;  }
+static void enter(AppContext* ctx)
+{
+    settings = &ctx->settings;
+}
 static void exit_(AppContext* ctx) { (void)ctx; }
 
 static void apply_left_right(int dir)
 {
-    // dir: -1(LEFT), +1(RIGHT)
+    (void)dir;
+
     switch ((Item)cursor) {
     case ITEM_RANDOMIZER:
-        g_settings.randomizer = (g_settings.randomizer == RNG_7BAG) ? RNG_PURE : RNG_7BAG;
+        settings->randomizer = (settings->randomizer == RNG_7BAG) ? RNG_PURE : RNG_7BAG;
         break;
     case ITEM_GHOST:
-        g_settings.ghost = !g_settings.ghost;
+        settings->ghost = !settings->ghost;
         break;
     case ITEM_HOLD:
-        g_settings.hold = !g_settings.hold;
+        settings->hold = !settings->hold;
         break;
     case ITEM_WASD:
-        g_settings.wasd = (g_settings.wasd == WASD_ON) ? WASD_OFF : WASD_ON;
+        settings->wasd = (settings->wasd == WASD_ON) ? WASD_OFF : WASD_ON;
         break;
     case ITEM_RESET:
-        settings_set_defaults();
+        settings_set_defaults(settings);   // ✅ 인자 버전
         break;
     default:
-        (void)dir;
         break;
     }
 }
@@ -104,16 +108,20 @@ static void render_sdl(Gui* gui)
         const char* val = "";
 
         if (i == ITEM_RANDOMIZER) {
-            snprintf(valuebuf, sizeof(valuebuf), "%s", settings_randomizer_name(g_settings.randomizer));
+            snprintf(valuebuf, sizeof(valuebuf), "%s",
+                    settings_randomizer_name(settings->randomizer));
             val = valuebuf;
         } else if (i == ITEM_GHOST) {
-            snprintf(valuebuf, sizeof(valuebuf), "%s", settings_onoff_name(g_settings.ghost));
+            snprintf(valuebuf, sizeof(valuebuf), "%s",
+                    settings_onoff_name(settings->ghost));
             val = valuebuf;
         } else if (i == ITEM_HOLD) {
-            snprintf(valuebuf, sizeof(valuebuf), "%s", settings_onoff_name(g_settings.hold));
+            snprintf(valuebuf, sizeof(valuebuf), "%s",
+                    settings_onoff_name(settings->hold));
             val = valuebuf;
         } else if (i == ITEM_WASD) {
-            snprintf(valuebuf, sizeof(valuebuf), "%s", settings_wasd_name(g_settings.wasd));
+            snprintf(valuebuf, sizeof(valuebuf), "%s",
+                    settings_wasd_name(settings->wasd));
             val = valuebuf;
         }
 
@@ -184,10 +192,10 @@ static void handle_input(AppContext* ctx, int ch) {
     case '\n':
     case ' ':
         if (cursor == ITEM_BACK) {
-            settings_save();
+            settings_save(settings);
             scene_set(&g_scene_title);
         } else if (cursor == ITEM_RESET) {
-            settings_set_defaults();
+            settings_set_defaults(settings);
         } else {
             apply_left_right(+1);
         }
@@ -195,13 +203,13 @@ static void handle_input(AppContext* ctx, int ch) {
 
     case 's':
     case 'S':
-        settings_save();
+        settings_save(settings);
         break;
 
     case 'b':
     case 'B':
     case IK_CANCEL:
-        settings_save();
+        settings_save(settings);
         scene_set(&g_scene_title);
         break;
     }

@@ -2,7 +2,6 @@
 #include <string.h>
 #include <stdbool.h>
 
-
 #include "config.h"
 #include "tetris.h"
 #include "draw.h"
@@ -15,7 +14,6 @@
 #include "term_compat.h"
 #include "gui.h"
 #include "input_keys.h"
-#include "tetris.h"  // blocks extern
 #include "app_context.h"
 
 #define LINESCORE1 1000
@@ -23,30 +21,34 @@
 #define LINESCORE3 5000
 #define LINESCORE4 8000
 
-// ===== game mode / lineclear anim =====
 typedef enum { GAME_PLAY = 0, GAME_LINECLEAR } GameMode;
 static GameMode g_mode;
 
-// ===== core state =====
-// NOTE: SDL에서는 프레임이 빠르므로 "틱" 기반 로직을 전부 ms 기반으로 통일한다.
-static int drop_interval_ms;   // 중력 간격(ms). 값이 작을수록 빠름
-static int drop_acc_ms;        // 중력 누적(ms)
-static int lc_acc_ms;          // 라인클리어 애니 누적(ms)
+static int drop_interval_ms;
+static int drop_acc_ms;
+static int lc_acc_ms;
+
 static int y, x, type, rot;
 
-// 점수/목표
 static int score;
 static int goal;
-// 무한모드용(스테이지 0)
 static int lines_total;
 static int level;
 
-// ===== game function =====
-// HOLD
-static int hold_type;            // -1 이면 비어있음
-static bool hold_used_this_turn; // 한 미노당 1회만 홀드 가능
-// PAUSE
-static int  pause_cursor = 0; // 0: Resume, 1: Restart, 2: Main Menu
+static int blocks_used = 0;
+
+static int hold_type;
+static bool hold_used_this_turn;
+
+static int  pause_cursor = 0;
+typedef enum { OVERLAY_NONE, OVERLAY_PAUSE } Overlay;
+static Overlay g_overlay = OVERLAY_NONE;
+
+#define NEXT_COUNT 5
+static int next_queue[NEXT_COUNT];
+
+static int bag[BLOCK_KIND];
+static int bag_pos = BLOCK_KIND;
 
 typedef struct {
     int rows[4];
@@ -56,21 +58,11 @@ typedef struct {
 
 static LineClearAnim g_lc;
 #define LINECLEAR_FRAMES ((BOARD_WIDTH / 2) + 2)
-// 라인클리어 애니 1프레임을 몇 ms로 볼지(속도 조절 포인트)
 #define LINECLEAR_FRAME_MS (70)
 
-// ===== SDL RENDER =====
-typedef enum { OVERLAY_NONE, OVERLAY_PAUSE } Overlay;
-static Overlay g_overlay = OVERLAY_NONE;
+static GameSettings* settings;
 
-// ===== NEXT =====
-#define NEXT_COUNT 5
-static int next_queue[NEXT_COUNT];
-
-// ===== randomizer (PURE / 7-BAG) =====
-static int bag[BLOCK_KIND];
-static int bag_pos = BLOCK_KIND;
-
+// ===== randomizer =====
 static void bag_shuffle(void) {
     for (int i = 0; i < BLOCK_KIND; i++) bag[i] = i;
     for (int i = BLOCK_KIND - 1; i > 0; i--) {
@@ -79,17 +71,16 @@ static void bag_shuffle(void) {
     }
     bag_pos = 0;
 }
-
 static void bag_reset(void) { bag_pos = BLOCK_KIND; }
 static int bag_draw(void) { if (bag_pos >= BLOCK_KIND) bag_shuffle(); return bag[bag_pos++]; }
 
 static int random_draw(void) {
-    if (g_settings.randomizer == RNG_7BAG) return bag_draw();
+    if (settings  && settings->randomizer == RNG_7BAG) return bag_draw();
     return rand() % BLOCK_KIND;
 }
 
 static void refill_next_queue(void) {
-    if (g_settings.randomizer == RNG_7BAG) bag_reset();
+    if (settings  && settings->randomizer == RNG_7BAG) bag_reset();
     for (int i = 0; i < NEXT_COUNT; i++) next_queue[i] = random_draw();
 }
 
@@ -99,12 +90,6 @@ static int pop_next(void) {
     next_queue[NEXT_COUNT - 1] = random_draw();
     return t;
 }
-
-// ===== SAVE DATE =====
-int g_last_stage = 1;
-int g_last_score = 0;
-int g_last_blocks_used = 0;
-static int blocks_used = 0;
 
 static void reset_active_pos(void) {
     y = 0;
@@ -129,8 +114,6 @@ static int score_for_lines(int lines) {
 
 static int stage_to_gravity_ms(int stage)
 {
-    // 값이 작을수록 더 빨리 떨어짐(ms)
-    // (기존 tick 기반 1~14는 SDL에서 초고속이므로 ms 커브로 교체)
     switch (stage) {
         case 1:  return 900;
         case 2:  return 780;
@@ -146,25 +129,24 @@ static int stage_to_gravity_ms(int stage)
     }
 }
 
-static inline bool is_infinite_mode(void) { return ctx->selected_stage == 0; }
+static inline bool is_infinite_mode(const AppContext* ctx) { return ctx->selected_stage == 0; }
 
 static void infinite_recalc_speed(void) {
-    // 10라인마다 레벨업(최대 10). 레벨은 낙하속도에만 영향.
     int lv = 1 + (lines_total / 10);
     if (lv > 10) lv = 10;
     level = lv;
     drop_interval_ms = stage_to_gravity_ms(level);
 }
 
-static void set_last_result(void) {
+static void set_last_result(AppContext* ctx) {
     app_set_last_result(ctx->selected_stage, score, blocks_used);
 }
 
-static void spawn_and_check_gameover(void) {
+static void spawn_and_check_gameover(AppContext* ctx) {
     spawn();
     drop_acc_ms = 0;
     if (check_collision(y, x, type, rot)) {
-        set_last_result();
+        set_last_result(ctx);
         scene_set(&g_scene_gameover);
     }
 }
@@ -183,31 +165,35 @@ static bool begin_lineclear_anim_if_needed(void) {
     return true;
 }
 
-static void enter(AppContext* ctx) { 
+static void enter(AppContext* ctx)
+{
+    // bind settings pointer here
+    settings = &ctx->settings;
+
     drop_interval_ms = stage_to_gravity_ms(ctx->selected_stage);
     g_mode = GAME_PLAY;
+
     g_lc.count = 0;
     g_lc.frame = 0;
     lc_acc_ms = 0;
 
-    // 재시작 시 보드 잔상/이전 판 상태 제거
     tetris_clear_board();
     drop_acc_ms = 0;
-    g_overlay = OVERLAY_NONE;
 
-    // 7-bag은 판 시작 시점에서 리셋 (재시작도 동일)
+    g_overlay = OVERLAY_NONE;
+    pause_cursor = 0;
+
+    // 7-bag reset
     bag_reset();
     refill_next_queue();
     spawn();
-
-    pause_cursor = 0;
 
     hold_type = -1;
     hold_used_this_turn = false;
 
     score = 0;
-    if (is_infinite_mode()) {
-        goal = -1;        // 무한모드: goal 사용 안 함
+    if (is_infinite_mode(ctx)) {
+        goal = -1;
         lines_total = 0;
         level = 1;
         drop_interval_ms = stage_to_gravity_ms(level);
@@ -220,8 +206,7 @@ static void enter(AppContext* ctx) {
     blocks_used = 0;
 }
 
-// ===== render split =====
-static void build_game_view(GameView* v)
+static void build_game_view(GameView* v, const AppContext* ctx)
 {
     memset(v, 0, sizeof(*v));
     v->cur_y = y;
@@ -231,7 +216,7 @@ static void build_game_view(GameView* v)
 
     v->ghost_enabled = false;
     v->ghost_y = y;
-    if (g_mode == GAME_PLAY && g_settings.ghost) {
+    if (g_mode == GAME_PLAY && settings  && settings->ghost) {
         int gy = y;
         while (!check_collision(gy + 1, x, type, rot)) gy++;
         if (gy != y) {
@@ -242,10 +227,10 @@ static void build_game_view(GameView* v)
 
     for (int i = 0; i < NEXT_COUNT; i++) v->next_queue[i] = next_queue[i];
 
-    v->hold_enabled = g_settings.hold;
+    v->hold_enabled = (settings && settings->hold);
     v->hold_type = hold_type;
 
-    v->infinite_mode = is_infinite_mode();
+    v->infinite_mode = is_infinite_mode(ctx);
     v->stage = ctx->selected_stage;
     v->score = score;
     v->goal  = goal;
@@ -290,17 +275,16 @@ static void render_overlay(void)
         }
         return;
     }
-
 }
 
-static void render(AppContext* ctx) { (void)ctx;
+static void render(AppContext* ctx)
+{
     GameView v;
-    build_game_view(&v);
+    build_game_view(&v, ctx);
     draw_game(&v);
     render_overlay();
 }
 
-// scene_game.c
 static void handle_pause_input(int ch) {
     if (ch == IK_UP || ch == 'w' || ch == 'W') {
         pause_cursor = (pause_cursor + 2) % 3;
@@ -321,7 +305,7 @@ static void handle_pause_input(int ch) {
     }
 }
 
-static void handle_play_input(int ch) {
+static void handle_play_input(AppContext* ctx, int ch) {
     if (g_mode == GAME_LINECLEAR) return;
 
     if (ch == 'p' || ch == 'P') {
@@ -330,21 +314,28 @@ static void handle_play_input(int ch) {
         return;
     }
 
-    if ((ch == IK_LEFT  || ch == g_settings.key_left)  &&
-        !check_collision(y, x - 1, type, rot)) x--;
+    InputKey k = (InputKey)ch;
 
-    if ((ch == IK_RIGHT || ch == g_settings.key_right) &&
-        !check_collision(y, x + 1, type, rot)) x++;
-
-    if ((ch == IK_DOWN  || ch == g_settings.key_down)  &&
-        !check_collision(y + 1, x, type, rot)) y++;
-
-    if (ch == IK_UP || ch == g_settings.key_rotate) {
-        int next = (rot + 1) % 4;
-        if (!check_collision(y, x, type, next)) rot = next;
+    // keybinds (settings 기반)
+    if (settings) {
+        if ((k == IK_LEFT  || k == settings->key_left)  && !check_collision(y, x - 1, type, rot)) x--;
+        if ((k == IK_RIGHT || k == settings->key_right) && !check_collision(y, x + 1, type, rot)) x++;
+        if ((k == IK_DOWN  || k == settings->key_down)  && !check_collision(y + 1, x, type, rot)) y++;
+        if ( k == IK_UP    || k == settings->key_rotate) {
+            int next = (rot + 1) % 4;
+            if (!check_collision(y, x, type, next)) rot = next;
+        }
+    } else {
+        if (k == IK_LEFT  && !check_collision(y, x - 1, type, rot)) x--;
+        if (k == IK_RIGHT && !check_collision(y, x + 1, type, rot)) x++;
+        if (k == IK_DOWN  && !check_collision(y + 1, x, type, rot)) y++;
+        if (k == IK_UP) {
+            int next = (rot + 1) % 4;
+            if (!check_collision(y, x, type, next)) rot = next;
+        }
     }
 
-    // hard drop (스페이스 고정)
+    // hard drop
     if (ch == ' ') {
         while (!check_collision(y + 1, x, type, rot)) y++;
         blocks_used++;
@@ -352,12 +343,12 @@ static void handle_play_input(int ch) {
         hold_used_this_turn = false;
 
         if (begin_lineclear_anim_if_needed()) return;
-        spawn_and_check_gameover();
+        spawn_and_check_gameover(ctx);
         return;
     }
 
-    // hold (C 고정)
-    if (g_settings.hold) {
+    // hold
+    if (settings && settings->hold) {
         if ((ch == 'c' || ch == 'C') && !hold_used_this_turn) {
             hold_used_this_turn = true;
 
@@ -372,23 +363,23 @@ static void handle_play_input(int ch) {
 
             reset_active_pos();
             if (check_collision(y, x, type, rot)) {
-                set_last_result();
+                set_last_result(ctx);
                 scene_set(&g_scene_gameover);
             }
         }
     }
 }
 
-static void handle_input(AppContext* ctx, int ch) { (void)ctx;
+static void handle_input(AppContext* ctx, int ch) {
     if (g_overlay == OVERLAY_PAUSE) {
         handle_pause_input(ch);
         return;
     }
-    handle_play_input(ch);
+    handle_play_input(ctx, ch);
 }
 
-static void update(AppContext* ctx, int dt) { (void)ctx;
-    // dt 폭주 방지(창 드래그/디버그 등)
+static void update(AppContext* ctx, int dt_ms)
+{
     if (dt_ms < 0) dt_ms = 0;
     if (dt_ms > 50) dt_ms = 50;
 
@@ -405,19 +396,19 @@ static void update(AppContext* ctx, int dt) { (void)ctx;
                 tetris_remove_lines(g_lc.rows, g_lc.count);
                 score += score_for_lines(g_lc.count);
 
-                if (is_infinite_mode()) {
+                if (is_infinite_mode(ctx)) {
                     lines_total += g_lc.count;
                     infinite_recalc_speed();
                 } else if (score >= goal) {
                     stage_mark_cleared(ctx->selected_stage);
-                    set_last_result();
+                    set_last_result(ctx);
                     scene_set(&g_scene_stage_clear);
                     g_mode = GAME_PLAY;
                     return;
                 }
 
                 g_mode = GAME_PLAY;
-                spawn_and_check_gameover();
+                spawn_and_check_gameover(ctx);
                 return;
             }
         }
@@ -426,9 +417,8 @@ static void update(AppContext* ctx, int dt) { (void)ctx;
 
     if (g_overlay == OVERLAY_PAUSE) return;
 
-    // ===== gravity (ms accumulator) =====
     drop_acc_ms += dt_ms;
-    if (drop_interval_ms < 30) drop_interval_ms = 30; // 안전 하한
+    if (drop_interval_ms < 30) drop_interval_ms = 30;
 
     while (drop_acc_ms >= drop_interval_ms) {
         drop_acc_ms -= drop_interval_ms;
@@ -438,7 +428,6 @@ static void update(AppContext* ctx, int dt) { (void)ctx;
             continue;
         }
 
-        // 착지
         blocks_used++;
         freeze_block(y, x, type, rot);
         hold_used_this_turn = false;
@@ -447,7 +436,7 @@ static void update(AppContext* ctx, int dt) { (void)ctx;
             drop_acc_ms = 0;
             return;
         }
-        spawn_and_check_gameover();
+        spawn_and_check_gameover(ctx);
         drop_acc_ms = 0;
         return;
     }

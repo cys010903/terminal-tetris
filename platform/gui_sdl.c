@@ -110,14 +110,14 @@ static void gui_shutdown_inplace(Gui* gui)
 
 Gui* gui_create(int w, int h, const char* title)
 {
-    Gui* gui = (Gui*)calloc(1, sizeof(Gui));
-    if (!gui) return NULL;
+    Gui* g = (Gui*)calloc(1, sizeof(*g));
+    if (!g) return NULL;
 
-    if (!gui_init_inplace(gui, w, h, title)) {
-        free(gui);
+    if (!gui_init_inplace(g, w, h, title)) {
+        gui_destroy(g);
         return NULL;
     }
-    return gui;
+    return g;
 }
 
 void gui_destroy(Gui* gui)
@@ -154,7 +154,7 @@ void gui_set_bg(Gui* gui, GuiColor c)
 
 void gui_begin_frame(Gui* gui)
 {
-    if (!gui) return;
+    if (!gui || !gui->ren || !gui->win) return;
 
     SDL_RenderSetViewport(gui->ren, NULL);
     SDL_RenderSetScale(gui->ren, 1.0f, 1.0f);

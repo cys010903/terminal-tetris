@@ -98,7 +98,7 @@ static void move_cursor_grid(int dr, int dc)
 }
 
 // ======= RENDER =======
-static void render_sdl(Gui* gui)
+static void render_sdl(AppContext* ctx, Gui* gui)
 {
     static uint32_t glow_time = 0;
     glow_time += 16;   // update에서 dt 넘겨도 되지만 단순화
@@ -243,10 +243,10 @@ static void render_sdl(Gui* gui)
     }
 }
 
-static void render(AppContext* ctx) { (void)ctx;
+static void render(AppContext* ctx) { 
     Gui* gui = term_get_gui();
     if (!gui) return;
-    render_sdl(gui);
+    render_sdl(ctx, gui);
 }
 
 // ======= INPUT =======
