@@ -25,8 +25,7 @@ static void logo_ensure_loaded(Gui* gui)
     s_logo = gui_load_texture(gui, "assets/logo.png", &s_logo_w, &s_logo_h);
 }
 
-static void enter(AppContext* ctx) { (void)ctx;
-
+static void enter(AppContext* ctx) { 
     cursor = 0;
 }
 

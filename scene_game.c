@@ -146,7 +146,7 @@ static int stage_to_gravity_ms(int stage)
     }
 }
 
-static inline bool is_infinite_mode(void) { return app_ctx()->selected_stage == 0; }
+static inline bool is_infinite_mode(void) { return ctx->selected_stage == 0; }
 
 static void infinite_recalc_speed(void) {
     // 10라인마다 레벨업(최대 10). 레벨은 낙하속도에만 영향.
@@ -157,7 +157,7 @@ static void infinite_recalc_speed(void) {
 }
 
 static void set_last_result(void) {
-    app_set_last_result(app_ctx()->selected_stage, score, blocks_used);
+    app_set_last_result(ctx->selected_stage, score, blocks_used);
 }
 
 static void spawn_and_check_gameover(void) {
@@ -183,8 +183,8 @@ static bool begin_lineclear_anim_if_needed(void) {
     return true;
 }
 
-static void  enter(AppContext* ctx) { (void)ctx;
-    drop_interval_ms = stage_to_gravity_ms(app_ctx()->selected_stage);
+static void enter(AppContext* ctx) { 
+    drop_interval_ms = stage_to_gravity_ms(ctx->selected_stage);
     g_mode = GAME_PLAY;
     g_lc.count = 0;
     g_lc.frame = 0;
@@ -212,7 +212,7 @@ static void  enter(AppContext* ctx) { (void)ctx;
         level = 1;
         drop_interval_ms = stage_to_gravity_ms(level);
     } else {
-        goal = stage_goal_score(app_ctx()->selected_stage);
+        goal = stage_goal_score(ctx->selected_stage);
         lines_total = 0;
         level = 0;
     }
@@ -246,7 +246,7 @@ static void build_game_view(GameView* v)
     v->hold_type = hold_type;
 
     v->infinite_mode = is_infinite_mode();
-    v->stage = app_ctx()->selected_stage;
+    v->stage = ctx->selected_stage;
     v->score = score;
     v->goal  = goal;
     v->level = level;
@@ -387,7 +387,7 @@ static void handle_input(AppContext* ctx, int ch) { (void)ctx;
     handle_play_input(ch);
 }
 
-static void update(AppContext* ctx, int dt_ms) { (void)ctx;
+static void update(AppContext* ctx, int dt) { (void)ctx;
     // dt 폭주 방지(창 드래그/디버그 등)
     if (dt_ms < 0) dt_ms = 0;
     if (dt_ms > 50) dt_ms = 50;
@@ -409,7 +409,7 @@ static void update(AppContext* ctx, int dt_ms) { (void)ctx;
                     lines_total += g_lc.count;
                     infinite_recalc_speed();
                 } else if (score >= goal) {
-                    stage_mark_cleared(app_ctx()->selected_stage);
+                    stage_mark_cleared(ctx->selected_stage);
                     set_last_result();
                     scene_set(&g_scene_stage_clear);
                     g_mode = GAME_PLAY;

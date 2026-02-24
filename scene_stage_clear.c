@@ -14,29 +14,27 @@
 
 
 
-static void enter(AppContext* ctx) { (void)ctx;
+static void enter(AppContext* ctx) { 
 
     // 스테이지 클리어 기록 저장
     records_push(ctx->last_stage, ctx->last_score, ctx->last_blocks_used);
 
     // 클리어 상태 저장(있으면)
     stage_mark_cleared(ctx->selected_stage); 
-    records_log_append_stage_clear(app_ctx()->selected_stage);
+    records_log_append_stage_clear(ctx->selected_stage);
 }
 
 // ===== forward =====
-static void render_sdl(Gui* gui);
+static void render_sdl(AppContext* ctx, Gui* gui);
 
-static void render(AppContext* ctx) { (void)ctx;
+static void render(AppContext* ctx)
+{
     Gui* gui = term_get_gui();
-    if (gui) { render_sdl(gui); return; }
-
+    if (gui) { render_sdl(ctx, gui); return; }
 }
 
-static void render_sdl(Gui* gui)
+static void render_sdl(AppContext* ctx, Gui* gui)
 {
-     AppContext* ctx = app_ctx();
-
     int w = 0, h = 0;
     gui_get_size(gui, &w, &h);
 
@@ -92,13 +90,12 @@ static void render_sdl(Gui* gui)
     gui_draw_text(gui, x5, y0 + lh*5, text_c,   l5);
 }
 
-static void handle_input(AppContext* ctx, int ch) { (void)ctx;
-
+static void handle_input(AppContext* ctx, int ch)
+{
     if (ch == 'n' || ch == 'N') {
-        AppContext* ctx = app_ctx();   // ✅ 여기서 얻기
         int next = ctx->last_stage + 1;
         if (next > NUMBER_OF_STAGES) next = NUMBER_OF_STAGES;
-        app_ctx()->selected_stage = next;         // stage_select에서 쓰는 전역
+        ctx->selected_stage = next;         // stage_select에서 쓰는 전역
         scene_set(&g_scene_game);
         return;
     }

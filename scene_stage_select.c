@@ -39,8 +39,8 @@ static const char* stage_desc(int stage)
 }
 
 static void enter(AppContext* ctx) { (void)ctx;
-    if (app_ctx()->selected_stage == 0) cursor_choice = infinite_choice();
-    else cursor_choice = clampi(app_ctx()->selected_stage, 1, NUMBER_OF_STAGES);
+    if (ctx->selected_stage == 0) cursor_choice = infinite_choice();
+    else cursor_choice = clampi(ctx->selected_stage, 1, NUMBER_OF_STAGES);
 
     cursor_choice = clampi(cursor_choice, 1, list_count());
 }
@@ -214,9 +214,9 @@ static void render_sdl(Gui* gui)
 
         // 선택된(고정) 항목 표시 '*'
         {
-            int selected = (app_ctx()->selected_stage == 0)
+            int selected = (ctx->selected_stage == 0)
                 ? (choice == infinite_choice())
-                : (choice == app_ctx()->selected_stage);
+                : (choice == ctx->selected_stage);
 
             if (selected) {
                 gui_draw_text(gui, rect.x + pad, rect.y + (rect.h - lh) / 2, title_c, "*");
@@ -273,8 +273,8 @@ static void handle_input(AppContext* ctx, int ch) { (void)ctx;
     }
 
     if (ch == IK_CONFIRM || ch == '\n' || ch == ' ') {
-        if (cursor_choice == infinite_choice()) app_ctx()->selected_stage = 0;
-        else app_ctx()->selected_stage = clampi(cursor_choice, 1, NUMBER_OF_STAGES);
+        if (cursor_choice == infinite_choice()) ctx->selected_stage = 0;
+        else ctx->selected_stage = clampi(cursor_choice, 1, NUMBER_OF_STAGES);
 
         scene_set(&g_scene_game);
         return;

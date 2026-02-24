@@ -5,52 +5,43 @@
 static Scene* g_scene = 0;
 static int g_quit = 0;
 
-// AppContext는 scene_manager 한 곳에서만 소유/획득
 static AppContext* g_ctx = 0;
 
-static AppContext* ctx_get(void)
+static void ensure_ctx(void)
 {
     if (!g_ctx) g_ctx = app_ctx();
-    return g_ctx;
 }
 
 void scene_set(Scene* next)
 {
-    AppContext* ctx = ctx_get();
+    ensure_ctx();
 
-    // (선택) 새 씬 들어갈 때 quit 플래그 초기화
+    // 새 씬 들어갈 때 quit 플래그 초기화(기존 동작 유지)
     g_quit = 0;
 
-    if (g_scene && g_scene->exit) {
-        g_scene->exit(ctx);
-    }
+    if (g_scene && g_scene->exit) g_scene->exit(g_ctx);
 
     g_scene = next;
 
-    if (g_scene && g_scene->enter) {
-        g_scene->enter(ctx);
-    }
+    if (g_scene && g_scene->enter) g_scene->enter(g_ctx);
 }
 
 void scene_update(int dt_ms)
 {
-    AppContext* ctx = ctx_get();
-    if (!g_scene || !g_scene->update) return;
-    g_scene->update(ctx, dt_ms);
+    ensure_ctx();
+    if (g_scene && g_scene->update) g_scene->update(g_ctx, dt_ms);
 }
 
 void scene_render(void)
 {
-    AppContext* ctx = ctx_get();
-    if (!g_scene || !g_scene->render) return;
-    g_scene->render(ctx);
+    ensure_ctx();
+    if (g_scene && g_scene->render) g_scene->render(g_ctx);
 }
 
 void scene_input(int ch)
 {
-    AppContext* ctx = ctx_get();
-    if (!g_scene || !g_scene->handle_input) return;
-    g_scene->handle_input(ctx, ch);
+    ensure_ctx();
+    if (g_scene && g_scene->handle_input) g_scene->handle_input(g_ctx, ch);
 }
 
 void scene_request_quit(void)
