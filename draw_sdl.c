@@ -1,6 +1,6 @@
 // draw_sdl.c
 #include "draw.h"
-#include "tetris_data.h"
+#include "tetris.h"
 #include "term_compat.h"
 #include "sdl_layout.h"
 #include "gui.h"
@@ -68,7 +68,7 @@ static void draw_board_grid(void)
     }
 }
 
-void draw_board(const int board[BOARD_HEIGHT][BOARD_WIDTH])
+void draw_board(void)
 {
     Gui* gui = term_get_gui();
     if (!gui) return;
@@ -80,10 +80,12 @@ void draw_board(const int board[BOARD_HEIGHT][BOARD_WIDTH])
 
     for (int y = 0; y < BOARD_HEIGHT; y++) {
         for (int x = 0; x < BOARD_WIDTH; x++) {
-            int v = board[y][x];
+            int v = tetris_cell(y, x);
             if (v <= 0) continue;
+
             int type = v - 1;
             if (type < 0 || type >= BLOCK_KIND) continue;
+
             draw_tile_px(ox + x * tw, oy + y * th, tw, th, g_colors[type], false);
         }
     }
@@ -98,7 +100,7 @@ void draw_block(int y, int x, int type, int rotation)
 
     for (int r = 0; r < BLOCK_SIZE; r++) {
         for (int c = 0; c < BLOCK_SIZE; c++) {
-            if (!blocks[type][rotation][r][c]) continue;
+            if (!tetris_mino_cell(type, rotation, r, c)) continue;
 
             int by = y + r;
             int bx = x + c;
@@ -120,7 +122,7 @@ void draw_ghost_block(int y, int x, int type, int rotation)
 
     for (int r = 0; r < BLOCK_SIZE; r++) {
         for (int cc = 0; cc < BLOCK_SIZE; cc++) {
-            if (!blocks[type][rotation][r][cc]) continue;
+            if (!tetris_mino_cell(type, rotation, r, cc)) continue;
 
             int by = y + r;
             int bx = x + cc;
@@ -155,7 +157,7 @@ void draw_mino_preview(int top, int left, int type, int rotation)
 
     for (int r = 0; r < BLOCK_SIZE; r++) {
         for (int c = 0; c < BLOCK_SIZE; c++) {
-            if (!blocks[type][rotation][r][c]) continue;
+            if (!tetris_mino_cell(type, rotation, r, c)) continue;
             int px = px0 + 4 + c * tw;
             int py = py0 + 4 + r * th;
             draw_tile_px(px, py, tw, th, g_colors[type], false);

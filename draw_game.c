@@ -69,7 +69,7 @@ void draw_game(const GameView* v)
 {
     if (!v) return;
 
-    draw_board(v->board);
+    draw_board();
 
     if (v->mode == GAMEVIEW_LINECLEAR && v->lc_count > 0) {
         draw_line_clear_anim(v->lc_rows, v->lc_count, v->lc_frame);

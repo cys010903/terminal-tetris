@@ -2,9 +2,8 @@
 
 #include "config.h"       // BOARD_WIDTH, BOARD_HEIGHT
 #include "tetris.h"       // BLOCK_KIND, BLOCK_SIZE, EMPTY
-#include "tetris_data.h"  // blocks extern
 
-int blocks[BLOCK_KIND][4][BLOCK_SIZE][BLOCK_SIZE] = {
+static const int blocks[BLOCK_KIND][4][BLOCK_SIZE][BLOCK_SIZE] = {
     // 1. MINO_I (하늘색)
     {
         {{0,0,0,0}, {1,1,1,1}, {0,0,0,0}, {0,0,0,0}},
@@ -57,7 +56,7 @@ int blocks[BLOCK_KIND][4][BLOCK_SIZE][BLOCK_SIZE] = {
 };
 
 // 게임판 데이터 (0: 빈칸, 1~7: 쌓인 블록)
-int board[BOARD_HEIGHT][BOARD_WIDTH] = {0};
+static  int board[BOARD_HEIGHT][BOARD_WIDTH] = {0};
 
 /**
  * @param n_y 이동하려는 목표 y좌표
@@ -66,6 +65,13 @@ int board[BOARD_HEIGHT][BOARD_WIDTH] = {0};
  * @param rotation 회전 상태
  * @return true(충돌 있음, 이동불가), false(충돌 없음, 이동가능)
  */
+int tetris_cell(int y, int x)
+{
+    if (y < 0 || y >= BOARD_HEIGHT) return 0;
+    if (x < 0 || x >= BOARD_WIDTH)  return 0;
+    return board[y][x];
+}
+
 bool check_collision(int n_y, int n_x, int type, int rotation) {
     for (int i = 0; i < BLOCK_SIZE; i++) {
         for (int j = 0; j < BLOCK_SIZE; j++) {
@@ -180,4 +186,25 @@ void tetris_remove_lines(const int rows[], int count) {
             board[i][j] = EMPTY;
         }
     }
+
+    
+}
+
+void tetris_clear_board(void)
+{
+    for (int y = 0; y < BOARD_HEIGHT; y++) {
+        for (int x = 0; x < BOARD_WIDTH; x++) {
+            board[y][x] = 0;
+        }
+    }
+}
+
+int tetris_mino_cell(int type, int rotation, int r, int c)
+{
+    if (type < 0 || type >= BLOCK_KIND) return 0;
+    if (rotation < 0 || rotation >= 4)  return 0;
+    if (r < 0 || r >= BLOCK_SIZE)       return 0;
+    if (c < 0 || c >= BLOCK_SIZE)       return 0;
+
+    return blocks[type][rotation][r][c];
 }

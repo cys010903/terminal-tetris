@@ -4,7 +4,6 @@
 
 #include "config.h"
 #include "tetris.h"
-#include "tetris_data.h"
 #include "draw.h"
 #include "draw_game.h"
 #include "game_view.h"
@@ -15,6 +14,7 @@
 #include "term_compat.h"
 #include "gui.h"
 #include "input_keys.h"
+#include "tetris.h"  // blocks extern
 
 #define LINESCORE1 1000
 #define LINESCORE2 3000
@@ -191,7 +191,7 @@ static void enter(void) {
     lc_acc_ms = 0;
 
     // 재시작 시 보드 잔상/이전 판 상태 제거
-    memset(board, 0, sizeof(board));
+    tetris_clear_board();
     drop_acc_ms = 0;
     g_overlay = OVERLAY_NONE;
 
@@ -224,9 +224,6 @@ static void enter(void) {
 static void build_game_view(GameView* v)
 {
     memset(v, 0, sizeof(*v));
-
-    v->board = board;
-
     v->cur_y = y;
     v->cur_x = x;
     v->cur_type = type;
