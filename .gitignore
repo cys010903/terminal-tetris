@@ -1,0 +1,27 @@
+cat >> .gitignore <<'EOF'
+
+# build artifacts
+*.o
+main
+test
+
+# editor
+.vscode/
+EOF
+
+# OS/editor junk
+*:Zone.Identifier
+
+# build artifacts
+*.o
+
+# backup/copies
+*.zone
+*.zone.*
+*.bak
+*.tmp
+*~
+
+# weird copy/identifier artifacts (e.g., "tetris.c:Zone - 복사본.Identifier")
+*:Zone - 복사본.Identifier
+*.Identifier
