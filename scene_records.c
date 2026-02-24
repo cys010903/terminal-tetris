@@ -5,6 +5,7 @@
 #include "scene_manager.h"
 #include "records.h"
 #include "settings.h"
+#include "app_context.h"
 
 // SDL/GUI 추상화
 #include "term_compat.h"
@@ -14,8 +15,7 @@
 static long page = 0;
 static const int page_size = 10;
 
-static void enter(void)
-{
+static void enter(AppContext* ctx) { (void)ctx;
     page = 0;
 }
 
@@ -32,8 +32,7 @@ static void clamp_page(long total)
 static void render_sdl(Gui* gui);
 
 
-static void render(void)
-{
+static void render(AppContext* ctx) { (void)ctx;
     Gui* gui = term_get_gui();
     if (gui) { render_sdl(gui); return; }
 }
@@ -162,8 +161,7 @@ static void render_sdl(Gui* gui)
 }
 
 // scene_records.c
-static void handle_input(int ch)
-{
+static void handle_input(AppContext* ctx, int ch) { (void)ctx;
     if (ch == IK_LEFT || ch == 'a' || ch == 'A' || ch == g_settings.key_page_prev) {
         page--;
     } else if (ch == IK_RIGHT || ch == 'd' || ch == 'D' || ch == g_settings.key_page_next) {
@@ -173,8 +171,10 @@ static void handle_input(int ch)
     }
 }
 
-static void update(int dt_ms){ (void)dt_ms; }
-
+static void update(AppContext* ctx, int dt_ms)
+{
+    (void)ctx;
+}
 Scene g_scene_records = {
     .name = "records",
     .enter = enter,

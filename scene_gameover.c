@@ -3,23 +3,23 @@
 #include "scene.h"
 #include "scene_manager.h"
 #include "records.h"
+#include "app_context.h"
 
 // SDL/GUI 추상화
 #include "term_compat.h"
 #include "gui.h"
 
 
-extern int g_last_stage, g_last_score, g_last_blocks_used;
 
-static void enter(void) {
-    records_push(g_last_stage, g_last_score, g_last_blocks_used);
+static void enter(AppContext* ctx) { 
+    records_push(ctx->last_stage, ctx->last_score, ctx->last_blocks_used);
 }
 
 // ===== forward =====
 static void render_sdl(Gui* gui);
 
 
-static void render(void) {
+static void render(AppContext* ctx) { (void)ctx;
     Gui* gui = term_get_gui();
     if (gui) { render_sdl(gui); return; }
 
@@ -79,14 +79,17 @@ static void render_sdl(Gui* gui)
 
 
 // scene_gameover.c
-static void handle_input(int ch) {
+static void handle_input(AppContext* ctx, int ch) { (void)ctx;
     if (ch == 'r' || ch == 'R') { scene_set(&g_scene_game);  return; }
     if (ch == 't' || ch == 'T') { scene_set(&g_scene_title); return; }
     if (ch == 'q' || ch == 'Q') { scene_request_quit();      return; }
 }
 
-static void update(int dt_ms) { (void)dt_ms; }
-
+static void update(AppContext* ctx, int dt_ms)
+{
+    (void)ctx;
+    (void)dt_ms;
+}
 Scene g_scene_gameover = {
     .name = "gameover",
     .enter = enter,

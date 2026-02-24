@@ -25,14 +25,12 @@ static void logo_ensure_loaded(Gui* gui)
     s_logo = gui_load_texture(gui, "assets/logo.png", &s_logo_w, &s_logo_h);
 }
 
-static void enter(void)
-{
+static void enter(AppContext* ctx) { (void)ctx;
+
     cursor = 0;
 }
 
-static void update(int dt_ms)
-{
-    (void)dt_ms;
+static void update(AppContext* ctx, int dt) { (void)ctx;
 }
 
 static void draw_center_text(Gui* gui, int y, GuiColor c, const char* s)
@@ -47,8 +45,7 @@ static void draw_center_text(Gui* gui, int y, GuiColor c, const char* s)
     gui_draw_text(gui, x, y, c, s);
 }
 
-static void render(void)
-{
+static void render(AppContext* ctx) { (void)ctx;
     Gui* gui = term_get_gui();
     if (!gui) return;
 
@@ -112,17 +109,19 @@ static void do_select(void)
     }
 }
 
-static void handle_input(int key)
+static void handle_input(AppContext* ctx, int ch)
 {
+    (void)ctx;
+    int key = ch;   // ✅ 추가 (기존 로직 그대로)
+
     if (key == IK_UP)   cursor = (cursor - 1 + MENU_COUNT) % MENU_COUNT;
     if (key == IK_DOWN) cursor = (cursor + 1) % MENU_COUNT;
 
-    if (key == IK_CONFIRM) do_select();
-    if (key == IK_CANCEL)  scene_request_quit();
+    if (key == IK_ENTER) do_select();
+    if (key == IK_ESC)   scene_request_quit();
 }
 
-static void exit_(void)
-{
+static void exit_(AppContext* ctx) { (void)ctx;
     gui_destroy_texture(&s_logo);
     s_logo_w = s_logo_h = 0;
 }

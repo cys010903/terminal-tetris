@@ -56,7 +56,7 @@ int main(void)
             }
         }
 
-        if (scene_is_quit_requested()) goto quit;
+        if (scene_should_quit()) goto quit;
 
         uint32_t now = gui_ticks_ms();
         uint32_t dt = now - last;

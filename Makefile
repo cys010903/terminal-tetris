@@ -21,7 +21,7 @@ SRCS := \
   scene_manager.c scene_title.c scene_stage_select.c scene_game.c \
   scene_gameover.c scene_stage_clear.c scene_records.c scene_settings.c \
   tetris.c records.c stage.c settings.c common.c layout.c draw_game.c \
-  draw_sdl.c bg_crt.c titlefall.c
+  draw_sdl.c bg_crt.c titlefall.c app_context.c
 
 OBJS := $(SRCS:.c=.o)
 

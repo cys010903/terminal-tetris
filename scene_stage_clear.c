@@ -6,29 +6,28 @@
 #include "scene_manager.h"
 #include "stage.h"
 #include "records.h"
+#include "app_context.h"
 
 // SDL/GUI 추상화
 #include "term_compat.h"
 #include "gui.h"
 
 
-extern int g_last_stage, g_last_score, g_last_blocks_used;
 
-static void enter(void)
-{
+static void enter(AppContext* ctx) { (void)ctx;
+
     // 스테이지 클리어 기록 저장
-    records_push(g_last_stage, g_last_score, g_last_blocks_used);
+    records_push(ctx->last_stage, ctx->last_score, ctx->last_blocks_used);
 
     // 클리어 상태 저장(있으면)
-    stage_mark_cleared(g_selected_stage);
-    records_log_append_stage_clear(g_selected_stage);
+    stage_mark_cleared(ctx->selected_stage); 
+    records_log_append_stage_clear(app_ctx()->selected_stage);
 }
 
 // ===== forward =====
 static void render_sdl(Gui* gui);
 
-static void render(void)
-{
+static void render(AppContext* ctx) { (void)ctx;
     Gui* gui = term_get_gui();
     if (gui) { render_sdl(gui); return; }
 
@@ -36,6 +35,8 @@ static void render(void)
 
 static void render_sdl(Gui* gui)
 {
+     AppContext* ctx = app_ctx();
+
     int w = 0, h = 0;
     gui_get_size(gui, &w, &h);
 
@@ -49,7 +50,7 @@ static void render_sdl(Gui* gui)
     GuiColor panel_bd = (GuiColor){ 180,180,190,255 };
 
     char line1[64];
-    snprintf(line1, sizeof(line1), "STAGE %d CLEAR!", g_last_stage);
+    snprintf(line1, sizeof(line1), "STAGE %d CLEAR!", ctx->last_stage);
 
     const char* l2 = "N) Next Stage";
     const char* l3 = "R) Restart";
@@ -91,12 +92,13 @@ static void render_sdl(Gui* gui)
     gui_draw_text(gui, x5, y0 + lh*5, text_c,   l5);
 }
 
-static void handle_input(int ch)
-{
+static void handle_input(AppContext* ctx, int ch) { (void)ctx;
+
     if (ch == 'n' || ch == 'N') {
-        int next = g_last_stage + 1;
+        AppContext* ctx = app_ctx();   // ✅ 여기서 얻기
+        int next = ctx->last_stage + 1;
         if (next > NUMBER_OF_STAGES) next = NUMBER_OF_STAGES;
-        g_selected_stage = next;         // stage_select에서 쓰는 전역
+        app_ctx()->selected_stage = next;         // stage_select에서 쓰는 전역
         scene_set(&g_scene_game);
         return;
     }
@@ -106,7 +108,7 @@ static void handle_input(int ch)
     if (ch == 'q' || ch == 'Q') { scene_request_quit(); return; }
 }
 
-static void update(int dt_ms) { (void)dt_ms; }
+static void update(AppContext* ctx, int dt) { (void)ctx; (void)dt; }
 
 Scene g_scene_stage_clear = {
     .name = "stage_clear",

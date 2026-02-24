@@ -1,89 +1,64 @@
+// scene_manager.c
 #include "scene_manager.h"
-
-#include "term_compat.h"
-#include "sdl_layout.h"
-#include "titlefall.h"
-
-// 타이틀계열 씬 심볼들(프로젝트에 있는 것만 남기세요)
-extern Scene g_scene_title;
-extern Scene g_scene_stage_select;
-extern Scene g_scene_records;
-extern Scene g_scene_settings;
-extern Scene g_scene_gameover;
-extern Scene g_scene_stage_clear;
-
-static int is_title_scene(Scene* s)
-{
-    return (s == &g_scene_title)
-        || (s == &g_scene_stage_select)
-        || (s == &g_scene_records)
-        || (s == &g_scene_settings)
-        || (s == &g_scene_gameover)
-        || (s == &g_scene_stage_clear);
-}
-
-static TitleFall g_titlefall;
-static int g_titlefall_inited = 0;
+#include "app_context.h"
 
 static Scene* g_scene = 0;
 static int g_quit = 0;
 
-void scene_set(Scene* next)
-{
-    g_quit = 0;
+// AppContext는 scene_manager 한 곳에서만 소유/획득
+static AppContext* g_ctx = 0;
 
-    if (g_scene && g_scene->exit) g_scene->exit();
-    g_scene = next;
-    if (g_scene && g_scene->enter) g_scene->enter();
+static AppContext* ctx_get(void)
+{
+    if (!g_ctx) g_ctx = app_ctx();
+    return g_ctx;
 }
 
-Scene* scene_get(void) { return g_scene; }
+void scene_set(Scene* next)
+{
+    AppContext* ctx = ctx_get();
+
+    // (선택) 새 씬 들어갈 때 quit 플래그 초기화
+    g_quit = 0;
+
+    if (g_scene && g_scene->exit) {
+        g_scene->exit(ctx);
+    }
+
+    g_scene = next;
+
+    if (g_scene && g_scene->enter) {
+        g_scene->enter(ctx);
+    }
+}
 
 void scene_update(int dt_ms)
 {
-    if (g_scene && is_title_scene(g_scene)) {
-        Gui* gui = term_get_gui();
-        if (gui) {
-            if (!g_titlefall_inited) {
-                int w=0,h=0; gui_get_size(gui,&w,&h);
-                int cw=18,ch=18; sdl_layout_get_cell_px(&cw,&ch);
-                titlefall_init(&g_titlefall, w, h, cw);
-                g_titlefall_inited = 1;
-            }
-            titlefall_update(&g_titlefall, dt_ms);
-        }
-    }
-
-    if (g_scene && g_scene->update) g_scene->update(dt_ms);
+    AppContext* ctx = ctx_get();
+    if (!g_scene || !g_scene->update) return;
+    g_scene->update(ctx, dt_ms);
 }
 
 void scene_render(void)
 {
-    // 타이틀계열 씬이면, 씬 렌더 전에 배경 먼저
-    if (g_scene && is_title_scene(g_scene)) {
-        Gui* gui = term_get_gui();
-        if (gui) {
-            int w=0,h=0; gui_get_size(gui,&w,&h);
-
-            if (!g_titlefall_inited) {
-                int cw=18,ch=18; sdl_layout_get_cell_px(&cw,&ch);
-                titlefall_init(&g_titlefall, w, h, cw);
-                g_titlefall_inited = 1;
-            } else {
-                titlefall_resize(&g_titlefall, w, h);
-            }
-
-            titlefall_render(gui, &g_titlefall);
-        }
-    }
-
-    if (g_scene && g_scene->render) g_scene->render();
+    AppContext* ctx = ctx_get();
+    if (!g_scene || !g_scene->render) return;
+    g_scene->render(ctx);
 }
 
 void scene_input(int ch)
 {
-    if (g_scene && g_scene->handle_input) g_scene->handle_input(ch);
+    AppContext* ctx = ctx_get();
+    if (!g_scene || !g_scene->handle_input) return;
+    g_scene->handle_input(ctx, ch);
 }
 
-void scene_request_quit(void) { g_quit = 1; }
-int scene_is_quit_requested(void) { return g_quit; }
+void scene_request_quit(void)
+{
+    g_quit = 1;
+}
+
+int scene_should_quit(void)
+{
+    return g_quit;
+}

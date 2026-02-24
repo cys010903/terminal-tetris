@@ -4,7 +4,7 @@
 #include "scene.h"
 #include "scene_manager.h"
 #include "settings.h"
-
+#include "app_context.h" 
 // SDL/GUI 추상화
 #include "term_compat.h"
 #include "gui.h"
@@ -21,8 +21,8 @@ typedef enum {
 
 static int cursor = 0;
 
-static void enter(void) { /* noop */ }
-static void exit_(void) { /* noop */ }
+static void enter(AppContext* ctx) { (void)ctx;  }
+static void exit_(AppContext* ctx) { (void)ctx; }
 
 static void apply_left_right(int dir)
 {
@@ -52,8 +52,7 @@ static void apply_left_right(int dir)
 // ===== forward =====
 static void render_sdl(Gui* gui);
 
-static void render(void)
-{
+static void render(AppContext* ctx) { (void)ctx;
     Gui* gui = term_get_gui();
     if (gui) {
         render_sdl(gui);
@@ -167,8 +166,7 @@ static void render_sdl(Gui* gui)
 }
 
 // scene_settings.c
-static void handle_input(int ch)
-{
+static void handle_input(AppContext* ctx, int ch) {
     switch (ch) {
     case IK_UP:
         cursor = (cursor - 1 + ITEM_COUNT) % ITEM_COUNT;
@@ -209,7 +207,7 @@ static void handle_input(int ch)
     }
 }
 
-static void update(int dt_ms) { (void)dt_ms; }
+static void update(AppContext* ctx, int dt_ms) { (void)ctx;  }
 
 Scene g_scene_settings = {
     .name = "settings",

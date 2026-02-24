@@ -2,8 +2,7 @@
 #include "config.h"
 
 // 스테이지 선택 결과(1부터)
-// NOTE: g_selected_stage == 0 이면 "무한(ENDLESS)" 모드
-extern int g_selected_stage;
+
 
 // clears.log에서 클리어 상태 로드
 void stage_clear_load(void);
