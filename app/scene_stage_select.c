@@ -286,7 +286,7 @@ static void handle_input(AppContext* ctx, int ch) { (void)ctx;
     }
 }
 
-static void update(AppContext* ctx, int dt) { (void)ctx; }
+static void update(AppContext* ctx, int dt) { (void)ctx; (void)dt; }
 // ======= SCENE =======
 Scene g_scene_stage_select = {
     .name = "stage_select",

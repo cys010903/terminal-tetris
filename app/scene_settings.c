@@ -174,7 +174,7 @@ static void render_sdl(Gui* gui)
 }
 
 // scene_settings.c
-static void handle_input(AppContext* ctx, int ch) {
+static void handle_input(AppContext* ctx, int ch) { (void) ctx;
     switch (ch) {
     case IK_UP:
         cursor = (cursor - 1 + ITEM_COUNT) % ITEM_COUNT;
@@ -215,7 +215,7 @@ static void handle_input(AppContext* ctx, int ch) {
     }
 }
 
-static void update(AppContext* ctx, int dt_ms) { (void)ctx;  }
+static void update(AppContext* ctx, int dt_ms) { (void)ctx;  (void) dt_ms;  }
 
 Scene g_scene_settings = {
     .name = "settings",

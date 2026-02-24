@@ -165,17 +165,18 @@ static void handle_input(AppContext* ctx, int ch)
 {
     GameSettings* settings = &ctx->settings;
 
-    if (ch == IK_LEFT || ch == 'a' || ch == 'A' || ch == settings->key_page_prev) {
+    if (ch == IK_LEFT || ch == 'a' || ch == 'A' || ch == (int)settings->key_page_prev) {
         page--;
-    } else if (ch == IK_RIGHT || ch == 'd' || ch == 'D' || ch == settings->key_page_next) {
+    } else if (ch == IK_RIGHT || ch == 'd' || ch == 'D' || ch == (int)settings->key_page_next) {
         page++;
-    } else if (ch == IK_CANCEL || ch == 'b' || ch == 'B' || ch == settings->key_back) {
+    } else if (ch == IK_CANCEL || ch == 'b' || ch == 'B' || ch == (int)settings->key_back) {
         scene_set(&g_scene_title);
     }
 }
 
 static void update(AppContext* ctx, int dt_ms)
 {
+    (void)dt_ms;
     (void)ctx;
 }
 Scene g_scene_records = {
