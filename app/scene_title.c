@@ -27,6 +27,14 @@ static void enter(AppContext* ctx)
     Gui* gui = term_get_gui();           // ✅ 이제 AppContext 완전 타입이라 접근 가능
     if (!gui) return;
     titlefx_set_enabled(1);
+
+     if (!s_logo) {
+        s_logo = gui_load_texture(gui, "assets/logo.png", &s_logo_w, &s_logo_h);
+
+        if (!s_logo) {
+            s_logo_w = s_logo_h = 0; // 실패 처리
+        }
+    }
 }
 
 static void update(AppContext* ctx, int dt_ms)
@@ -39,11 +47,6 @@ static void render(AppContext* ctx)
 {(void)ctx;
     Gui* gui = term_get_gui();
     if (!gui) return;
-
-    //ensure_titlefall(gui);
-
-    // ✅ 배경(뒤 연출) 먼저
-    //titlefall_render(gui, &s_fall);
 
     int win_w = 0, win_h = 0;
     gui_get_size(gui, &win_w, &win_h);
