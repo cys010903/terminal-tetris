@@ -48,10 +48,15 @@ int main(void)
     const uint32_t target_frame_ms = 16;
     uint32_t last = gui_ticks_ms();
 
-    while (1) {
+    int running = 1;
+
+    while (running) {
         SDL_Event e;
         while (SDL_PollEvent(&e)) {
-            if (e.type == SDL_QUIT) goto quit;
+            if (e.type == SDL_QUIT) {
+                running = 0;
+                break;
+            }
 
             if (e.type == SDL_KEYDOWN && e.key.repeat == 0) {
                 int k = map_key(e.key.keysym.sym);
@@ -59,7 +64,12 @@ int main(void)
             }
         }
 
-        if (scene_should_quit()) goto quit;
+        if (!running) break;
+
+        if (scene_should_quit()) {
+            running = 0;
+            break;
+        }
 
         uint32_t now = gui_ticks_ms();
         uint32_t dt = now - last;
@@ -72,10 +82,10 @@ int main(void)
         gui_end_frame(gui);
 
         uint32_t used = gui_ticks_ms() - now;
-        if (used < target_frame_ms) gui_sleep_ms(target_frame_ms - used);
+        if (used < target_frame_ms)
+            gui_sleep_ms(target_frame_ms - used);
     }
 
-quit:
     records_flush();
     gui_destroy(gui);
     return 0;
