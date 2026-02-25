@@ -316,23 +316,13 @@ static void handle_play_input(AppContext* ctx, int ch) {
 
     InputKey k = (InputKey)ch;
 
-    // keybinds (settings 기반)
-    if (settings) {
-        if ((k == IK_LEFT  || k == settings->key_left)  && !check_collision(y, x - 1, type, rot)) x--;
-        if ((k == IK_RIGHT || k == settings->key_right) && !check_collision(y, x + 1, type, rot)) x++;
-        if ((k == IK_DOWN  || k == settings->key_down)  && !check_collision(y + 1, x, type, rot)) y++;
-        if ( k == IK_UP    || k == settings->key_rotate) {
-            int next = (rot + 1) % 4;
-            if (!check_collision(y, x, type, next)) rot = next;
-        }
-    } else {
-        if (k == IK_LEFT  && !check_collision(y, x - 1, type, rot)) x--;
-        if (k == IK_RIGHT && !check_collision(y, x + 1, type, rot)) x++;
-        if (k == IK_DOWN  && !check_collision(y + 1, x, type, rot)) y++;
-        if (k == IK_UP) {
-            int next = (rot + 1) % 4;
-            if (!check_collision(y, x, type, next)) rot = next;
-        }
+    // keybinds (settings 기반 + WASD)
+    if (settings_match_left(settings, k)  && !check_collision(y, x - 1, type, rot)) x--;
+    if (settings_match_right(settings, k) && !check_collision(y, x + 1, type, rot)) x++;
+    if (settings_match_down(settings, k)  && !check_collision(y + 1, x, type, rot)) y++;
+    if (settings_match_rotate(settings, k)) {
+        int next = (rot + 1) % 4;
+        if (!check_collision(y, x, type, next)) rot = next;
     }
 
     // hard drop

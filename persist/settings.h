@@ -42,6 +42,12 @@ const char* settings_randomizer_name(RandomizerMode m);
 const char* settings_onoff_name(bool v);
 const char* settings_wasd_name(WasdMode m);
 
+// input helpers (low-level key -> action match)
+bool settings_match_left(const GameSettings* s, InputKey k);
+bool settings_match_right(const GameSettings* s, InputKey k);
+bool settings_match_down(const GameSettings* s, InputKey k);
+bool settings_match_rotate(const GameSettings* s, InputKey k);
+
 #ifdef __cplusplus
 }
 #endif

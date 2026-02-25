@@ -61,6 +61,43 @@ const char* settings_randomizer_name(RandomizerMode m) { return (m == RNG_7BAG) 
 const char* settings_onoff_name(bool v) { return v ? "ON" : "OFF"; }
 const char* settings_wasd_name(WasdMode m) { return (m == WASD_ON) ? "ON" : "OFF"; }
 
+static InputKey key_ci(InputKey k)
+{
+    // ASCII letter only
+    if (k >= 0 && k <= 255) {
+        return (InputKey)tolower((unsigned char)k);
+    }
+    return k;
+}
+
+bool settings_match_left(const GameSettings* s, InputKey k)
+{
+    if (!s) return (k == IK_LEFT);
+    if (k == IK_LEFT || k == s->key_left) return true;
+    return (s->wasd == WASD_ON) && (key_ci(k) == (InputKey)'a');
+}
+
+bool settings_match_right(const GameSettings* s, InputKey k)
+{
+    if (!s) return (k == IK_RIGHT);
+    if (k == IK_RIGHT || k == s->key_right) return true;
+    return (s->wasd == WASD_ON) && (key_ci(k) == (InputKey)'d');
+}
+
+bool settings_match_down(const GameSettings* s, InputKey k)
+{
+    if (!s) return (k == IK_DOWN);
+    if (k == IK_DOWN || k == s->key_down) return true;
+    return (s->wasd == WASD_ON) && (key_ci(k) == (InputKey)'s');
+}
+
+bool settings_match_rotate(const GameSettings* s, InputKey k)
+{
+    if (!s) return (k == IK_UP);
+    if (k == IK_UP || k == s->key_rotate) return true;
+    return (s->wasd == WASD_ON) && (key_ci(k) == (InputKey)'w');
+}
+
 void settings_set_defaults(GameSettings* s)
 {
     if (!s) return;
