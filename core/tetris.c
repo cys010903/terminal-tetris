@@ -97,6 +97,44 @@ bool check_collision(int n_y, int n_x, int type, int rotation) {
     return false;
 }
 
+// === Step1: Scene가 쓰는 API ===
+bool tetris_can_place(int y, int x, int type, int rot)
+{
+    if (type < 0 || type >= BLOCK_KIND) return false;
+    rot &= 3;
+    return !check_collision(y, x, type, rot);
+}
+
+bool tetris_try_move(int* io_y, int* io_x, int type, int rot, int dx, int dy)
+{
+    if (!io_y || !io_x) return false;
+    if (type < 0 || type >= BLOCK_KIND) return false;
+
+    int ny = *io_y + dy;
+    int nx = *io_x + dx;
+    rot &= 3;
+
+    if (check_collision(ny, nx, type, rot)) return false;
+    *io_y = ny;
+    *io_x = nx;
+    return true;
+}
+
+int tetris_ghost_y(int y, int x, int type, int rot)
+{
+    if (type < 0 || type >= BLOCK_KIND) return y;
+    rot &= 3;
+
+    int gy = y;
+    while (!check_collision(gy + 1, x, type, rot)) gy++;
+    return gy;
+}
+
+int tetris_hard_drop_y(int y, int x, int type, int rot)
+{
+    return tetris_ghost_y(y, x, type, rot);
+}
+
 typedef struct { int dx; int dy_up; } Kick;
 
 static const Kick KICK_JLSTZ[8][5] = {

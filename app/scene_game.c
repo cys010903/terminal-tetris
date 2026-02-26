@@ -316,26 +316,22 @@ static void handle_play_input(AppContext* ctx, int ch) {
 
     InputKey k = (InputKey)ch;
 
-    // keybinds (settings 기반 + WASD)
+    // keybinds (settings 기반 + WASD) : Scene는 "의도 전달"만
     if (settings) {
-        if ((k == IK_LEFT  || k == settings->key_left)  && !check_collision(y, x - 1, type, rot)) x--;
-        if ((k == IK_RIGHT || k == settings->key_right) && !check_collision(y, x + 1, type, rot)) x++;
-        if ((k == IK_DOWN  || k == settings->key_down)  && !check_collision(y + 1, x, type, rot)) y++;
-        if (k == IK_UP || k == settings->key_rotate) {
-            (void)tetris_try_rotatre(&y, &x, type, &rot, +1);
-        }
+        if (k == IK_LEFT  || k == settings->key_left)  (void)tetris_try_move(&y, &x, type, rot, -1, 0);
+        if (k == IK_RIGHT || k == settings->key_right) (void)tetris_try_move(&y, &x, type, rot, +1, 0);
+        if (k == IK_DOWN  || k == settings->key_down)  (void)tetris_try_move(&y, &x, type, rot,  0, +1);
+        if (k == IK_UP || k == settings->key_rotate)   (void)tetris_try_rotatre(&y, &x, type, &rot, +1);
     } else {
-        if (k == IK_LEFT  && !check_collision(y, x - 1, type, rot)) x--;
-        if (k == IK_RIGHT && !check_collision(y, x + 1, type, rot)) x++;
-        if (k == IK_DOWN  && !check_collision(y + 1, x, type, rot)) y++;
-        if (k == IK_UP) {
-            (void)tetris_try_rotatre(&y, &x, type, &rot, +1);
-        }
+        if (k == IK_LEFT)  (void)tetris_try_move(&y, &x, type, rot, -1, 0);
+        if (k == IK_RIGHT) (void)tetris_try_move(&y, &x, type, rot, +1, 0);
+        if (k == IK_DOWN)  (void)tetris_try_move(&y, &x, type, rot,  0, +1);
+        if (k == IK_UP)    (void)tetris_try_rotatre(&y, &x, type, &rot, +1);
     }
 
     // hard drop
     if (ch == ' ') {
-        while (!check_collision(y + 1, x, type, rot)) y++;
+        y = tetris_hard_drop_y(y, x, type, rot);
         blocks_used++;
         freeze_block(y, x, type, rot);
         hold_used_this_turn = false;
@@ -346,7 +342,7 @@ static void handle_play_input(AppContext* ctx, int ch) {
     }
 
     // hold
-        if (settings && settings->hold) {
+    if (settings && settings->hold) {
         if ((ch == 'c' || ch == 'C') && !hold_used_this_turn) {
             hold_used_this_turn = true;
 
@@ -360,7 +356,7 @@ static void handle_play_input(AppContext* ctx, int ch) {
             }
 
             reset_active_pos();
-            if (check_collision(y, x, type, rot)) {
+            if (!tetris_can_place(y, x, type, rot)) {
                 set_last_result(ctx);
                 scene_set(&g_scene_gameover);
             }
@@ -421,7 +417,7 @@ static void update(AppContext* ctx, int dt_ms)
     while (drop_acc_ms >= drop_interval_ms) {
         drop_acc_ms -= drop_interval_ms;
 
-        if (!check_collision(y + 1, x, type, rot)) {
+        if (tetris_try_move(&y, &x, type, rot, 0, +1)) {
             y++;
             continue;
         }
