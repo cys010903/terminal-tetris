@@ -37,9 +37,6 @@ static int level;
 
 static int blocks_used = 0;
 
-static int hold_type;
-static bool hold_used_this_turn;
-
 static int  pause_cursor = 0;
 typedef enum { OVERLAY_NONE, OVERLAY_PAUSE } Overlay;
 static Overlay g_overlay = OVERLAY_NONE;
@@ -71,6 +68,7 @@ static void bag_shuffle(void) {
     }
     bag_pos = 0;
 }
+
 static void bag_reset(void) { bag_pos = BLOCK_KIND; }
 static int bag_draw(void) { if (bag_pos >= BLOCK_KIND) bag_shuffle(); return bag[bag_pos++]; }
 
@@ -80,7 +78,7 @@ static int random_draw(void) {
 }
 
 static void refill_next_queue(void) {
-    if (settings  && settings->randomizer == RNG_7BAG) bag_reset();
+    if (settings && settings->randomizer == RNG_7BAG) bag_reset();
     for (int i = 0; i < NEXT_COUNT; i++) next_queue[i] = random_draw();
 }
 
@@ -145,7 +143,7 @@ static void set_last_result(AppContext* ctx) {
 static void spawn_and_check_gameover(AppContext* ctx) {
     spawn();
     drop_acc_ms = 0;
-    if (check_collision(y, x, type, rot)) {
+    if (!tetris_can_place(y, x, type, rot)) {
         set_last_result(ctx);
         scene_set(&g_scene_gameover);
     }
@@ -188,8 +186,6 @@ static void enter(AppContext* ctx)
     refill_next_queue();
     spawn();
 
-    hold_type = -1;
-    hold_used_this_turn = false;
 
     score = 0;
     if (is_infinite_mode(ctx)) {
@@ -216,19 +212,18 @@ static void build_game_view(GameView* v, const AppContext* ctx)
 
     v->ghost_enabled = false;
     v->ghost_y = y;
-    if (g_mode == GAME_PLAY && settings  && settings->ghost) {
-        int gy = y;
-        while (!check_collision(gy + 1, x, type, rot)) gy++;
+    if (g_mode == GAME_PLAY && settings && settings->ghost) {
+        int gy = tetris_ghost_y(y, x, type, rot);
         if (gy != y) {
             v->ghost_enabled = true;
             v->ghost_y = gy;
         }
     }
 
-    for (int i = 0; i < NEXT_COUNT; i++) v->next_queue[i] = next_queue[i];
+    tetris_next_peek(v->next_queue);
 
     v->hold_enabled = (settings && settings->hold);
-    v->hold_type = hold_type;
+    v->hold_type = tetris_hold_type();
 
     v->infinite_mode = is_infinite_mode(ctx);
     v->stage = ctx->selected_stage;
@@ -334,31 +329,21 @@ static void handle_play_input(AppContext* ctx, int ch) {
         y = tetris_hard_drop_y(y, x, type, rot);
         blocks_used++;
         freeze_block(y, x, type, rot);
-        hold_used_this_turn = false;
+        tetris_hold_new_turn();
 
         if (begin_lineclear_anim_if_needed()) return;
         spawn_and_check_gameover(ctx);
         return;
     }
 
-    // hold
     if (settings && settings->hold) {
-        if ((ch == 'c' || ch == 'C') && !hold_used_this_turn) {
-            hold_used_this_turn = true;
-
-            if (hold_type < 0) {
-                hold_type = type;
-                type = pop_next();
-            } else {
-                int tmp = type;
-                type = hold_type;
-                hold_type = tmp;
-            }
-
-            reset_active_pos();
-            if (!tetris_can_place(y, x, type, rot)) {
-                set_last_result(ctx);
-                scene_set(&g_scene_gameover);
+        if (ch == 'c' || ch == 'C') {
+            if (tetris_hold_swap(&type, &rot)) {
+                reset_active_pos();
+                if (!tetris_can_place(y, x, type, rot)) {
+                    set_last_result(ctx);
+                    scene_set(&g_scene_gameover);
+                }
             }
         }
     }
@@ -424,7 +409,7 @@ static void update(AppContext* ctx, int dt_ms)
 
         blocks_used++;
         freeze_block(y, x, type, rot);
-        hold_used_this_turn = false;
+        tetris_hold_new_turn();
 
         if (begin_lineclear_anim_if_needed()) {
             drop_acc_ms = 0;
