@@ -25,6 +25,9 @@ void tetris_clear_board(void); // 보드 초기화
 bool check_collision(int n_y, int n_x, int type, int rotation);
 void freeze_block(int y, int x, int type, int rotation);
 
+//
+bool tetris_try_rotatre(int* io_y, int* io_x, int type, int* io_rot, int dir);
+
 //애니매이션 연출용
 int  tetris_find_full_lines(int out_rows[4]);
 void tetris_remove_lines(const int rows[], int count);

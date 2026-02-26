@@ -97,6 +97,79 @@ bool check_collision(int n_y, int n_x, int type, int rotation) {
     return false;
 }
 
+typedef struct { int dx; int dy_up; } Kick;
+
+static const Kick KICK_JLSTZ[8][5] = {
+    // 0->1, 1->0, 1->2, 2->1, 2->3, 3->2, 3->0, 0->3
+    {{ 0, 0},{-1, 0},{-1, 1},{ 0,-2},{-1,-2}},
+    {{ 0, 0},{ 1, 0},{ 1,-1},{ 0, 2},{ 1, 2}},
+    {{ 0, 0},{ 1, 0},{ 1,-1},{ 0, 2},{ 1, 2}},
+    {{ 0, 0},{-1, 0},{-1, 1},{ 0,-2},{-1,-2}},
+    {{ 0, 0},{ 1, 0},{ 1, 1},{ 0,-2},{ 1,-2}},
+    {{ 0, 0},{-1, 0},{-1,-1},{ 0, 2},{-1, 2}},
+    {{ 0, 0},{-1, 0},{-1,-1},{ 0, 2},{-1, 2}},
+    {{ 0, 0},{ 1, 0},{ 1, 1},{ 0,-2},{ 1,-2}},
+};
+
+static const Kick KICK_I[8][5] = {
+    // 0->1, 1->0, 1->2, 2->1, 2->3, 3->2, 3->0, 0->3
+    {{ 0, 0},{-2, 0},{ 1, 0},{-2,-1},{ 1, 2}},
+    {{ 0, 0},{ 2, 0},{-1, 0},{ 2, 1},{-1,-2}},
+    {{ 0, 0},{-1, 0},{ 2, 0},{-1, 2},{ 2,-1}},
+    {{ 0, 0},{ 1, 0},{-2, 0},{ 1,-2},{-2, 1}},
+    {{ 0, 0},{ 2, 0},{-1, 0},{ 2, 1},{-1,-2}},
+    {{ 0, 0},{-2, 0},{ 1, 0},{-2,-1},{ 1, 2}},
+    {{ 0, 0},{ 1, 0},{-2, 0},{ 1,-2},{-2, 1}},
+    {{ 0, 0},{-1, 0},{ 2, 0},{-1, 2},{ 2,-1}},
+};
+
+static int srs_index(int from, int to)
+{
+    // CW: 0->1,1->2,2->3,3->0
+    if (from == 0 && to == 1) return 0;
+    if (from == 1 && to == 0) return 1;
+    if (from == 1 && to == 2) return 2;
+    if (from == 2 && to == 1) return 3;
+    if (from == 2 && to == 3) return 4;
+    if (from == 3 && to == 2) return 5;
+    if (from == 3 && to == 0) return 6;
+    if (from == 0 && to == 3) return 7;
+    return -1;
+}
+
+bool tetris_try_rotatre(int* io_y, int* io_x, int type, int* io_rot, int dir) {
+    if (!io_y || !io_x || !io_rot) return false;
+    if (type < 0 || type >= BLOCK_KIND) return false;
+
+    int from = (*io_rot) & 3;
+    int to = (from + (dir >= 0 ? 1 : 3)) & 3;
+
+    // O는 킥 테이블이 사실상 의미 없음(회전 모양 동일)
+    if (type == 3) {
+        if (!check_collision(*io_y, *io_x, type, to)) {
+            *io_rot = to;
+            return true;
+        }
+        return false;
+    }
+
+    const Kick (*table)[5] = (type == 0) ? KICK_I : KICK_JLSTZ;
+    int idx = srs_index(from, to);
+    if (idx < 0) return false;
+
+    for (int i = 0; i < 5; i++) {
+        int nx = *io_x + table[idx][i].dx;
+        int ny = *io_y - table[idx][i].dy_up; // +y_up -> y_down 반전
+        if (!check_collision(ny, nx, type, to)) {
+            *io_x = nx;
+            *io_y = ny;
+            *io_rot = to;
+            return true;
+        }
+    }
+    return false;
+}
+
 void freeze_block(int y, int x, int type, int rotation) {
     for (int i = 0; i < BLOCK_SIZE; i++) {
         for (int j = 0; j < BLOCK_SIZE; j++) {
@@ -208,3 +281,4 @@ int tetris_mino_cell(int type, int rotation, int r, int c)
 
     return blocks[type][rotation][r][c];
 }
+
