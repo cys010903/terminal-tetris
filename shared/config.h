@@ -12,7 +12,7 @@
 #define NEXT_COUNT 5
 
 // ===== 레코드 =====
-#define RECORDS_BUFFER_SIZE 10
+#define RECORDS_BUFFER_SIZE 100
 #define RECORDS_FILE "records.log"
 
 #define MIN_TERM_HEIGHT 30

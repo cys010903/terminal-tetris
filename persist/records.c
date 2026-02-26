@@ -167,13 +167,16 @@ int records_read_latest_page(int page, int page_size, RecordEntry* out)
     if (start_from_latest >= total) return 0;
 
     // 최신 페이지(page=0)만 링버퍼 사용 (기존 기능 유지)
-    if (page == 0)
+    if (start_from_latest < (long)g_ring.count)
     {
-        int n = (g_ring.count < page_size) ? g_ring.count : page_size;
+        long remain_in_cache = (long)g_ring.count - start_from_latest;
+        int n = (remain_in_cache < page_size) ? (int)remain_in_cache : page_size;
 
         for (int i = 0; i < n; i++)
         {
-            int idx = (g_ring.head - 1 - i + RECORDS_BUFFER_SIZE) % RECORDS_BUFFER_SIZE;
+            // latest_offset = start_from_latest + i (최신에서 얼마나 떨어졌는지)
+            long latest_offset = start_from_latest + i;
+            int idx = (g_ring.head - 1 - (int)latest_offset + RECORDS_BUFFER_SIZE) % RECORDS_BUFFER_SIZE;
             out[i] = g_ring.buf[idx];
         }
         return n;
@@ -182,7 +185,6 @@ int records_read_latest_page(int page, int page_size, RecordEntry* out)
     // 그 외 페이지는 파일에서 읽기 (기존 기능 유지)
     long remain = total - start_from_latest;
     int n = (remain < page_size) ? (int)remain : page_size;
-
     return records_log_read_latest_range(start_from_latest, n, out);
 }
 
